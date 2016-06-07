@@ -396,6 +396,12 @@ function Rng_Slider:pointIN_Rs(p_x, p_y)
   x = x+val -- right sbtn x; x+10 extend mouse zone to the right(more comfortable)
   return p_x >= x and p_x <= x+10 + sb_w and p_y >= self.y and p_y <= self.y + self.h
 end
+--------
+function Rng_Slider:pointIN_rng(p_x, p_y)
+  local x  = self.rng_x + self.rng_w * self.norm_val  -- start rng
+  local x2 = self.rng_x + self.rng_w * self.norm_val2 -- end rng
+  return p_x >= x+5 and p_x <= x2-5 and p_y >= self.y and p_y <= self.y + self.h
+end
 ------------------------
 function Rng_Slider:mouseIN_Ls()
   return gfx.mouse_cap&1==0 and self:pointIN_Ls(gfx.mouse_x,gfx.mouse_y)
@@ -404,13 +410,21 @@ end
 function Rng_Slider:mouseIN_Rs()
   return gfx.mouse_cap&1==0 and self:pointIN_Rs(gfx.mouse_x,gfx.mouse_y)
 end
+--------
+function Rng_Slider:mouseIN_rng()
+  return gfx.mouse_cap&1==0 and self:pointIN_rng(gfx.mouse_x,gfx.mouse_y)
+end
 ------------------------
 function Rng_Slider:mouseDown_Ls()
-  return gfx.mouse_cap&1==1 and self:pointIN_Ls(mouse_ox,mouse_oy)
+  return gfx.mouse_cap&1==1 and last_mouse_cap&1==0 and self:pointIN_Ls(mouse_ox,mouse_oy)
 end
 --------
 function Rng_Slider:mouseDown_Rs()
-  return gfx.mouse_cap&1==1 and self:pointIN_Rs(mouse_ox,mouse_oy)
+  return gfx.mouse_cap&1==1 and last_mouse_cap&1==0 and self:pointIN_Rs(mouse_ox,mouse_oy)
+end
+--------
+function Rng_Slider:mouseDown_rng()
+  return gfx.mouse_cap&1==1 and last_mouse_cap&1==0 and self:pointIN_rng(mouse_ox,mouse_oy)
 end
 -----------------------------------
 function Rng_Slider:set_norm_val()
@@ -431,6 +445,18 @@ function Rng_Slider:set_norm_val2()
     -- valid val2 --
     if VAL<self.norm_val then VAL=self.norm_val elseif VAL>1 then VAL=1 end
     self.norm_val2=VAL
+end
+--------
+function Rng_Slider:set_norm_val_both()
+    local x, w = self.x, self.w
+    local diff = self.norm_val2 - self.norm_val -- values difference
+    local K = 1           -- K = coefficient
+    if Ctrl then K=10 end -- when Ctrl pressed
+    local VAL  = self.norm_val  + (gfx.mouse_x-last_x)/(w*K)
+    -- valid values --
+    if VAL<0 then VAL = 0 elseif VAL>1-diff then VAL = 1-diff end
+    self.norm_val  = VAL
+    self.norm_val2 = VAL + diff
 end
 -----------------------------------
 function Rng_Slider:draw_body()
@@ -485,20 +511,22 @@ function Rng_Slider:draw()
     local fnt,fnt_sz = self.fnt, self.fnt_sz
     -- set additional coordinates --
     self.sb_w  = math.floor(self.w/30) -- sidebuttons width(change it if need)
-    self.rng_x = self.x + self.sb_w    -- range streak x
-    self.rng_w = self.w - self.sb_w*2  -- range streak w
+    self.rng_x = self.x + self.sb_w    -- range streak min x
+    self.rng_w = self.w - self.sb_w*2  -- range streak max w
     -- Get mouse state -------------
           -- Reset Ls,Rs states --
-          if gfx.mouse_cap&1==0 then self.Ls_state,self.Rs_state = false,false end
+          if gfx.mouse_cap&1==0 then self.Ls_state, self.Rs_state, self.rng_state = false,false,false end
           -- in element --
-          --if self:mouseIN() then a=a+0.1 end
           if self:mouseIN_Ls() or self:mouseIN_Rs() then a=a+0.1 end
           -- in elm L_down --
-          if self:mouseDown_Ls() then self.Ls_state = true end
-          if self:mouseDown_Rs() then self.Rs_state = true end
-          if self.Ls_state == true then a=a+0.2; self:set_norm_val()  end
-          if self.Rs_state == true then a=a+0.2; self:set_norm_val2() end
-          if (self.Ls_state or self.Rs_state) and self.onMove then self.onMove() end
+          if self:mouseDown_Ls()  then self.Ls_state = true end
+          if self:mouseDown_Rs()  then self.Rs_state = true end
+          if self:mouseDown_rng() then self.rng_state = true end
+          ----------------
+          if self.Ls_state  == true then a=a+0.2; self:set_norm_val()      end
+          if self.Rs_state  == true then a=a+0.2; self:set_norm_val2()     end
+          if self.rng_state == true then a=a+0.2; self:set_norm_val_both() end
+          if (self.Ls_state or self.Rs_state or self.rng_state) and self.onMove then self.onMove() end
           -- in elm L_up(released and was previously pressed) --
           -- if self:mouseClick() and self.onClick then self.onClick() end
     -- Draw sldr body, frame, sidebuttons --
@@ -507,12 +535,11 @@ function Rng_Slider:draw()
     self:draw_frame() -- frame
     self:draw_sbtns() -- draw L,R sidebuttons
     -- Draw label,values --
-    gfx.set(table.unpack(self.fnt_rgba))   -- set label color
+    gfx.set(0.7, 0.9, 0.4, 1)   -- set label color
     gfx.setfont(1, fnt, fnt_sz) -- set lbl,val fnt
     self:draw_lbl() -- draw lbl
     self:draw_val() -- draw value
 end
-
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 ---   Frame Class Methods  -----------------------------------------------------
@@ -533,20 +560,39 @@ end
 local btn1 = Button:new(20,20,50,30, 0.5,0.3,0.4,0.3, "Btn1","Arial",15, {0.7,0.9,0.4,1} )
 local btn2 = Button:new(80,20,50,30, 0.6,0.4,0.1,0.3, "Btn2","Arial",15, {0.7,0.9,0.4,1} )
 local Button_TB = {btn1,btn2}
------
-    -- x,y,w,h, r,g,b,a, lbl,fnt,fnt_sz, norm_val = check, norm_val2 = checkbox table --
-local ch_box1 = CheckBox:new(120,320,120,20,  0.6,0.6,0.6,0.3, "Chan :","Arial",15, {0.7,0.9,0.4,1},
-                            1, {"1/2","3/4","5/6","7/8","9/10","etc"} )
-local ch_box2 = CheckBox:new(120,350,120,20,  0.6,0.6,0.6,0.3, "Mode :","Arial",15, {0.7,0.9,0.4,1}, 
+-- Btn Example --
+btn1.onClick = 
+ function()
+   -- Here you can add something else --
+   reaper.Main_OnCommand(40757, 0) -- Split - see in action, list action ID 
+ end 
+btn2.onClick = 
+ function() 
+   reaper.Main_OnCommand(41588, 0) -- Glue  - see in action, list action ID
+ end 
+-- etc
+---------------
+    -- x,y,w,h, r,g,b,a, lbl,fnt,fnt_sz, {fnt_rgba}, norm_val = check, norm_val2 = checkbox table --
+local ch_box1 = CheckBox:new(120,320,120,20,  0.6,0.6,0.6,0.3, "Select track :","Arial",15, {0.7,0.9,0.8,1},
+                            1, {"1","2","3","4","5","6"} )
+local ch_box2 = CheckBox:new(120,350,120,20,  0.6,0.6,0.6,0.3, "Mode :","Arial",15, {0.7,0.9,0.8,1}, 
                             1, {"EQ","Gate","Compressor","Convolve","Subtract","etc"} )
-local CheckBox_TB = {ch_box1,ch_box2}
+
+--- CheckBox Example ---
+ch_box1.onClick = 
+  function() 
+     local track = reaper.GetTrack(0, ch_box1.norm_val-1)
+     if track then reaper.SetOnlyTrackSelected(track) end
+  end
 -----
+local CheckBox_TB = {ch_box1,ch_box2}
+---------------
 local knb1 = Knob:new(20,80,50,50,   0.7,0.3,0.3,0.3, "K1","Arial",14,{0.7,0.9,0.4,1}, 0.5 )
 local knb2 = Knob:new(80,80,50,50,   0.3,0.7,0.3,0.3, "K2","Arial",14,{0.7,0.9,0.4,1}, 0.5 )
 local knb3 = Knob:new(20,140,50,50,  0.7,0.7,0.3,0.3, "K3","Arial",14,{0.7,0.9,0.4,1}, 0.5 )
 local knb4 = Knob:new(80,140,50,50,  0.3,0.7,0.7,0.3, "K4","Arial",14,{0.7,0.9,0.4,1}, 0.5 )
 local Knob_TB = {knb1,knb2,knb3,knb4}
------
+---------------
 local sldr1 = H_Slider:new(20,220,220,20, 0.7,0.3,0.3,0.3, "Sldr1","Arial",15,{0.7,0.9,0.4,1}, 0.5 )
 local sldr2 = V_Slider:new(150,20,40,180, 0.3,0.5,0.7,0.3, "Sldr2","Arial",15,{0.7,0.9,0.4,1}, 0.5 )
 local sldr3 = V_Slider:new(200,20,40,180, 0.3,0.5,0.7,0.3, "Sldr3","Arial",15,{0.7,0.9,0.4,1}, 0.5 )
