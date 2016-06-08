@@ -1,0 +1,125 @@
+--[[
+   * ReaScript Name: Create WAVE file from array of numbers
+   * Lua script for Cockos REAPER
+   * Author: EUGEN27771
+   * Author URI: http://forum.cockos.com/member.php?u=50462
+   * Licence: GPL v3
+   * Version: 1.0
+  ]]
+
+function Create_Wave_File(FilePath, buf, audioFormat, nchans, srate, bitspersample)
+  if not (buf and audioFormat and nchans and srate and bitspersample) then return reaper.MB("No data!","Info",0) end
+  ----------------------------------------------------------
+  local Pfmt --------------- Pack format -------------------
+  if     audioFormat==1 and bitspersample==16 then Pfmt = "i2"     -- 16 will be added in next version, don't use it now! 
+  elseif audioFormat==1 and bitspersample==24 then Pfmt = "i3"     -- 24 will be added in next version, don't use it now!
+  elseif audioFormat==3 and bitspersample==32 then Pfmt = "f"      -- 32 FP
+  elseif audioFormat==3 and bitspersample==64 then Pfmt = "d"      -- 64 FP
+  else return reaper.MB( "Not supported format !","Info",0)        -- If format not supported
+  end
+  ----------------------------------------------------------
+  local numSamples = #buf -- numSamples -------------------- 
+  if numSamples<2 then return reaper.MB( "numSamples < 2","Info",0) end -- If numSamples < 2
+  local data_ChunkDataSize = numSamples * nchans * bitspersample/8      -- Calculate data_ChunkDataSize!
+  -----------------------------------------------------------------------------------------------------------------
+  -- RIFF_Chunk =  RIFF_ChunkID, RIFF_chunkSize, RIFF_Type --------------------------------------------------------
+  -----------------------------------------------------------------------------------------------------------------
+    local RIFF_Chunk, RIFF_ChunkID, RIFF_chunkSize, RIFF_Type 
+    RIFF_ChunkID   = "RIFF"
+    RIFF_chunkSize = 36 + data_ChunkDataSize  -- 4 + (8+fmt_ChunkDataSize) + (8+data_ChunkDataSize)
+    RIFF_Type      = "WAVE"
+    RIFF_Chunk = string.pack("<c4 I4 c4",
+                              RIFF_ChunkID,
+                              RIFF_chunkSize,
+                              RIFF_Type)  --------------------------------------------->>> Pack RIFF
+  -----------------------------------------------------------------------------------------------------------------
+  -- fmt_Chunk = fmt_ChunkID, fmt_ChunkDataSize, audioFormat, nchans, srate, byterate, blockalign, bitspersample --
+  -----------------------------------------------------------------------------------------------------------------
+    local fmt_Chunk, fmt_ChunkID, fmt_ChunkDataSize, byterate, blockalign
+    fmt_ChunkID       = "fmt "
+    fmt_ChunkDataSize = 16 
+    byterate          = srate * nchans * bitspersample/8
+    blockalign        = nchans * bitspersample/8
+    fmt_Chunk  = string.pack("< c4 I4 I2 I2 I4 I4 I2 I2",
+                              fmt_ChunkID,
+                              fmt_ChunkDataSize,
+                              audioFormat,
+                              nchans,
+                              srate,
+                              byterate,
+                              blockalign,
+                              bitspersample)  ----------------------------------------->>> Pack fmt
+  -----------------------------------------------------------------------------------------------------------------
+  -- data_Chunk  =  data_ChunkID, data_ChunkDataSize, Data(bytes) - is written to a file later --------------------
+  -----------------------------------------------------------------------------------------------------------------
+    local data_Chunk, data_ChunkID
+    data_ChunkID = "data"
+    data_Chunk = string.pack("< c4 I4",
+                              data_ChunkID,
+                              data_ChunkDataSize)  ------------------------------------>>> Pack data(ID,size only)
+  
+  -----------------------------------------------------------------------------------------------------------------
+  -- Pack data(samples) and Write to File -------------------------------------------------------------------------
+  -----------------------------------------------------------------------------------------------------------------
+    local file = io.open(FilePath,"wb")  -- Open file in "wb"
+    if not file then return reaper.MB("File not aviable!","Info",0) end -- If file not aviable
+      ---------------------------------------------------
+      -- Pack values(samples), using Pfmt  --------------
+      ---------------------------------------------------
+      --[[ You can use simple version: for i=1, numSamples do Data_buf[i] = string.pack(Pfmt, buf[i] ) end
+           But it is very slower, it is checked. Much faster packing blocks!!! ]]--
+      ---------------------------------------------------
+      local n = 1024                              -- Block size for packing(it can be changed)
+      local rest = numSamples % n                 -- Rest, remainder of the division
+      local Pfmt_str = "<" .. string.rep(Pfmt, n) -- Pack format string, for full blocks
+      local Data_buf = {}
+      -- Pack full blocks --------------
+      local b = 1
+      for i = 1, numSamples-rest, n do
+          Data_buf[b] = string.pack(Pfmt_str, table.unpack( buf, i, i+n-1 ) ) ------------------->>>  Pack samples(Blocks)
+          b = b+1
+      end
+      -- Pack rest ---------------------
+      Pfmt_str = "<" .. string.rep(Pfmt, rest)    -- Pack format string, for rest
+      Data_buf[b] = string.pack(Pfmt_str, table.unpack( buf, numSamples-rest+1, numSamples ) ) -->>>  Pack samples(Rest)
+  
+  -------------------------------------------------------
+  -- Write Data to file ---------------------------------
+  -------------------------------------------------------
+  file:write(RIFF_Chunk,fmt_Chunk,data_Chunk, table.concat(Data_buf) ) ---------------->>>  Write All to File
+  file:close()
+ return true
+end
+
+----------------------------
+----------------------------
+--[[-- Simple Test(generate sine wave) --
+FilePath = "C:\\Users\\EUGEN\\Desktop\\Test.wav" -- Choose your path !!!
+--------
+function Gen_Sine(Freq,srate,duration)
+  if not Freq then return end
+  Freq = math.min(math.max(Freq,10),22050)
+  local buf = {}
+  local Two_Pi = 2*math.pi 
+  local adj = Two_Pi/srate * Freq
+  local pos = 0
+  -- gen sine --------------
+    for i=1, srate*duration*2, 2 do 
+        tone = math.sin(pos)
+        buf[i]   = tone
+        buf[i+1] = tone
+        pos = pos+adj
+        if pos>=Two_Pi then pos = pos-Two_Pi end
+    end
+  return buf
+end
+------------------------------------
+------------------------------------
+local start_time = reaper.time_precise()                        -- start time_test
+local buf = Gen_Sine(440, 44100, 60*3)
+reaper.ShowConsoleMsg("Generate time = ".. reaper.time_precise()-start_time .. '\n') -- generate time_test
+----------------
+local start_time = reaper.time_precise()                        -- start time_test
+Create_Wave_File(FilePath, buf, 3, 2, 44100, 32)
+reaper.ShowConsoleMsg("Create file time = ".. reaper.time_precise()-start_time .. '\n') -- create file time_test
+--]]
