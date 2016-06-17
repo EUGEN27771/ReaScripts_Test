@@ -4,42 +4,47 @@
    * Author: EUGEN27771
    * Author URI: http://forum.cockos.com/member.php?u=50462
    * Licence: GPL v3
-   * Version: 1.0
+   * Version: 1.01
   ]]
-  
---------------------------------------------------------------------------------
--- Decoding function from lua.org ----------------------------------------------
---------------------------------------------------------------------------------
-  -- Lua 5.1+ base64 v3.0 (c) 2009 by Alex Kloss <alexthkloss@web.de> ----------
-  -- licensed under the terms of the LGPL2 -------------------------------------
-  ------------------------------------------------------------------------------
-  -- character table string
-  local b='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-  -- decoding from base64
-  function Decode(data)
-      data = string.gsub(data, '[^'..b..'=]', '')
-      return (data:gsub('.', function(x)
-          if (x == '=') then return '' end
-          local r,f = '',(b:find(x)-1)
-          for i=6,1,-1 do r=r..(f%2^i-f%2^(i-1)>0 and '1' or '0') end
-          return r;
-      end):gsub('%d%d%d?%d?%d?%d?%d?%d?', function(x)
-          if (#x ~= 8) then return '' end
-          local c=0
-          for i=1,8 do c=c+(x:sub(i,i)=='1' and 2^(8-i) or 0) end
-          return string.char(c)
-      end))
-  end
 
---------------------------------------------------------------------------------
--- Base64 to HEX ---------------------------------------------------------------
---------------------------------------------------------------------------------
-function B64_to_HEX(line)       
-  local BIN  = Decode(line)
-  local VAL = { BIN:byte(1,-1) } -- to bytes, values
-  local Pfmt = string.rep("%02X", #VAL)
-  return string.format(Pfmt, table.unpack(VAL))
-end
+-------------------------------------------------------------------------------
+-- Base64_to_Hex(modded from lua.org functions)  ------------------------------
+-------------------------------------------------------------------------------
+-- decryption table --
+local base64bytes = {['A']=0, ['B']=1, ['C']=2, ['D']=3, ['E']=4, ['F']=5, ['G']=6, ['H']=7, ['I']=8, ['J']=9, ['K']=10,['L']=11,['M']=12,
+                     ['N']=13,['O']=14,['P']=15,['Q']=16,['R']=17,['S']=18,['T']=19,['U']=20,['V']=21,['W']=22,['X']=23,['Y']=24,['Z']=25,
+                     ['a']=26,['b']=27,['c']=28,['d']=29,['e']=30,['f']=31,['g']=32,['h']=33,['i']=34,['j']=35,['k']=36,['l']=37,['m']=38,
+                     ['n']=39,['o']=40,['p']=41,['q']=42,['r']=43,['s']=44,['t']=45,['u']=46,['v']=47,['w']=48,['x']=49,['y']=50,['z']=51,
+                     ['0']=52,['1']=53,['2']=54,['3']=55,['4']=56,['5']=57,['6']=58,['7']=59,['8']=60,['9']=61,['+']=62,['/']=63,['=']=nil}
+--------------------------------------------
+-- Decode Base64 to HEX --------------------
+--------------------------------------------
+function B64_to_HEX(data)
+  local chars  = {}
+  local result = ""
+    for dpos=0, #data-1, 4 do
+        -- Get chars -------------------
+        for char=1,4 do chars[char] = base64bytes[(string.sub(data,(dpos+char), (dpos+char)) or "=")] end -- Get chars
+        -- To hex ----------------------
+        if chars[3] and chars[4] then 
+            result = string.format( '%s%02X%02X%02X', result,                 -- if 1,2,3,4 chars
+                                   (chars[1]<<2)       + ((chars[2]&0x30)>>4), 
+                                   ((chars[2]&0xf)<<4) + (chars[3]>>2),
+                                   ((chars[3]&0x3)<<6) + chars[4]              )
+          elseif  chars[3] then 
+            result = string.format('%s%02X%02X', result,                      -- if 1,2,3 chars
+                                   (chars[1]<<2)       + ((chars[2]&0x30)>>4), 
+                                   ((chars[2]&0xf)<<4) + (chars[3]>>2),
+                                   ((chars[3]&0x3)<<6)                         )
+          else
+            result = string.format('%s%02X', result,                          -- if 1,2 chars
+                                   (chars[1]<<2)       + ((chars[2]&0x30)>>4)  )
+        end 
+       ---------------------------------
+    end
+  return result  
+end 
+
 ----------------------------------------
 --[[ Name to Hex(not necessarily?) -----
 ----------------------------------------
@@ -55,17 +60,19 @@ end
 -- FX_Chunk_to_HEX -------------------------------------------------------------
 --------------------------------------------------------------------------------
 function FX_Chunk_to_HEX(FX_Chunk, Preset_Name)
-  local Preset_Chunk = FX_Chunk:match("\n.*\n")  -- extract preset(simple var)
+  local Preset_Chunk = FX_Chunk:match("\n.*\n")   -- extract preset(simple var)
   local Hex_TB = {}
   local init = 1
   ---------------------
   for i=1, math.huge do 
-        line = Preset_Chunk:match("\n.-\n", init) 
+        line = Preset_Chunk:match("\n.-\n", init) -- extract line from preset(simple var)
         if not line then --[[Hex_TB[i-1] = Name_to_Hex(Preset_Name)--]] -- not necessarily
            break 
-        end 
+        end
+        ---------------
+        init = init + #line - 1                 -- for next line
+        line = line:gsub("\n","")               -- del "\n"
         Hex_TB[i] = B64_to_HEX(line)
-        init = init + #line - 1
   end
   ---------------------
   return table.concat(Hex_TB)
@@ -173,9 +180,15 @@ function Save_VST_Preset(track, fxnum, Preset_Name)
   if not (track and fxnum and Preset_Name) then return end   --  Need track, fxnum, Preset_Name
   local FX_Chunk, PresetFile = Get_FX_Data(track, fxnum)
   -----------
-  if FX_Chunk and PresetFile then 
+  if FX_Chunk and PresetFile then
+     local start_time = reaper.time_precise() 
      local Preset_HEX = FX_Chunk_to_HEX(FX_Chunk, Preset_Name)
+     --reaper.ShowConsoleMsg("Processing time = ".. reaper.time_precise()-start_time ..'\n') -- time test
+     ------
+     local start_time = reaper.time_precise()
      Write_to_File(PresetFile, Preset_HEX, Preset_Name)
+     --reaper.ShowConsoleMsg("Write time = ".. reaper.time_precise()-start_time ..'\n') -- time test
+     ------
      reaper.TrackFX_SetPreset(track, fxnum, Preset_Name) -- For "update", but this is optional
   end
 end    
@@ -189,5 +202,5 @@ local fxnum = 0                                 -- fxnum must be defined in you 
 local Preset_Name = "New".. math.random(1,1000) -- Name must be defined in you function(always different), for test only !
 ------------------------- 
 -------------------------
-Save_VST_Preset(track, fxnum, Preset_Name)      -- RUN TEST !!! 
+Save_VST_Preset(track, fxnum, Preset_Name)      -- RUN TEST !!!
         
