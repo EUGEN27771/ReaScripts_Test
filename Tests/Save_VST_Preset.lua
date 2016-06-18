@@ -62,21 +62,9 @@ end
 --------------------------------------------------------------------------------
 function FX_Chunk_to_HEX(FX_Chunk, Preset_Name)
   local Preset_Chunk = FX_Chunk:match("\n.*\n")   -- extract preset(simple var)
-  local Hex_TB = {}
-  local init = 1
-  ---------------------
-  for i=1, math.huge do 
-        line = Preset_Chunk:match("\n.-\n", init) -- extract line from preset(simple var)
-        if not line then --[[Hex_TB[i-1] = Name_to_Hex(Preset_Name)--]] -- not necessarily
-           break 
-        end
-        ---------------
-        init = init + #line - 1                 -- for next line
-        line = line:gsub("\n","")               -- del "\n"
-        Hex_TB[i] = B64_to_HEX(line)
-  end
-  ---------------------
-  return table.concat(Hex_TB)
+  ----------------------------------------
+  Preset_Chunk = Preset_Chunk:gsub("\n","")       -- del "\n"
+  return B64_to_HEX(Preset_Chunk)
 end
 
 --------------------------------------------------------------------------------
