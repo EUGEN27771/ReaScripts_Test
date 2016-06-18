@@ -21,30 +21,31 @@ local base64bytes = {['A']=0, ['B']=1, ['C']=2, ['D']=3, ['E']=4, ['F']=5, ['G']
 --------------------------------------------
 function B64_to_HEX(data)
   local chars  = {}
-  local result = ""
+  local result = {}
+  local hex
     for dpos=0, #data-1, 4 do
         -- Get chars -------------------
         for char=1,4 do chars[char] = base64bytes[(string.sub(data,(dpos+char), (dpos+char)) or "=")] end -- Get chars
         -- To hex ----------------------
         if chars[3] and chars[4] then 
-            result = string.format( '%s%02X%02X%02X', result,                 -- if 1,2,3,4 chars
-                                   (chars[1]<<2)       + ((chars[2]&0x30)>>4), 
-                                   ((chars[2]&0xf)<<4) + (chars[3]>>2),
-                                   ((chars[3]&0x3)<<6) + chars[4]              )
+            hex = string.format('%02X%02X%02X',                                  -- if 1,2,3,4 chars
+                                   (chars[1]<<2)       + ((chars[2]&0x30)>>4),   -- 1
+                                   ((chars[2]&0xf)<<4) + (chars[3]>>2),          -- 2
+                                   ((chars[3]&0x3)<<6) + chars[4]              ) -- 3
           elseif  chars[3] then 
-            result = string.format('%s%02X%02X', result,                      -- if 1,2,3 chars
-                                   (chars[1]<<2)       + ((chars[2]&0x30)>>4), 
-                                   ((chars[2]&0xf)<<4) + (chars[3]>>2),
+            hex = string.format('%02X%02X',                                      -- if 1,2,3 chars
+                                   (chars[1]<<2)       + ((chars[2]&0x30)>>4),   -- 1
+                                   ((chars[2]&0xf)<<4) + (chars[3]>>2),          -- 2
                                    ((chars[3]&0x3)<<6)                         )
           else
-            result = string.format('%s%02X', result,                          -- if 1,2 chars
-                                   (chars[1]<<2)       + ((chars[2]&0x30)>>4)  )
+            hex = string.format('%02X',                                          -- if 1,2 chars
+                                   (chars[1]<<2)       + ((chars[2]&0x30)>>4)  ) -- 1
         end 
        ---------------------------------
+       table.insert(result,hex)
     end
-  return result  
-end 
-
+  return table.concat(result)  
+end
 ----------------------------------------
 --[[ Name to Hex(not necessarily?) -----
 ----------------------------------------
