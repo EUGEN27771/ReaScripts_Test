@@ -46,16 +46,6 @@ function B64_to_HEX(data)
     end
   return table.concat(result)  
 end
-----------------------------------------
---[[ Name to Hex(not necessarily?) -----
-----------------------------------------
-function Name_to_Hex(Preset_Name)
-  local VAL  = {Preset_Name:byte(1,-1)} -- to bytes, values
-  local Pfmt = string.rep("%02X", #VAL)
-  local HEX  = string.format(Pfmt, table.unpack(VAL))
-  return HEX.."0000000000" -- ???
-end
---]]
 
 --------------------------------------------------------------------------------
 -- FX_Chunk_to_HEX -------------------------------------------------------------
