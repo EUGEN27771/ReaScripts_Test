@@ -8,14 +8,14 @@
   ]]
 
 function Create_Wave_File(FilePath, buf, audioFormat, nchans, srate, bitspersample)
-  if not (buf and audioFormat and nchans and srate and bitspersample) then return reaper.MB("No data!","Info",0) end
+  if not (FilePath and buf and audioFormat and nchans and srate and bitspersample) then return reaper.MB("No data!","Info",0) end
   ----------------------------------------------------------
   local Pfmt --------------- Pack format -------------------
-  if     audioFormat==1 and bitspersample==16 then Pfmt = "i2"     -- 16 will be added in next version, don't use it now! 
-  elseif audioFormat==1 and bitspersample==24 then Pfmt = "i3"     -- 24 will be added in next version, don't use it now!
-  elseif audioFormat==3 and bitspersample==32 then Pfmt = "f"      -- 32 FP
-  elseif audioFormat==3 and bitspersample==64 then Pfmt = "d"      -- 64 FP
-  else return reaper.MB( "Not supported format !","Info",0)        -- If format not supported
+  if     audioFormat==3 and bitspersample==32 then Pfmt = "f"        -- 32 FP
+  elseif audioFormat==3 and bitspersample==64 then Pfmt = "d"        -- 64 FP
+  --elseif audioFormat==1 and bitspersample==24 then Pfmt = "i3"     -- 24 will be added in next version, don't use it now!
+  --elseif audioFormat==1 and bitspersample==16 then Pfmt = "i2"     -- 16 will be added in next version, don't use it now! 
+  else return reaper.MB( "Not supported format(32,64 bit, format 3 need!) !","Info",0) -- If format not supported
   end
   ----------------------------------------------------------
   local numSamples = #buf -- numSamples -------------------- 
@@ -116,7 +116,7 @@ end
 ------------------------------------
 ------------------------------------
 local start_time = reaper.time_precise()                        -- start time_test
-local buf = Gen_Sine(440, 44100, 60*3)
+local buf = Gen_Sine(440, 44100, 60*5)
 reaper.ShowConsoleMsg("Generate time = ".. reaper.time_precise()-start_time .. '\n') -- generate time_test
 ----------------
 local start_time = reaper.time_precise()                        -- start time_test
