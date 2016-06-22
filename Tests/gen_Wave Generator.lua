@@ -506,7 +506,7 @@ end
 --------------------------------------------------------------------------------
 -- Generate Wave(code from JS) -------------------------------------------------
 --------------------------------------------------------------------------------
--- 1 = Sine, 2 = Triangle, 3 = Saw
+--  Sine, Triangle, Saw, WhiteNoise, PinkNoise -- 
 function Gen_Wave(Freq, srate, duration, Type)
   local start_time = reaper.time_precise()   -- start time_test
     ------------------
@@ -570,11 +570,11 @@ function GetSet_Values()
     --------------------
     local FP_i = FilePath 
     for i=1, 100 do 
-       if reaper.file_exists(FP_i) then FP_i = FilePath .."-"..i 
-          else FilePath = FP_i break
+       if reaper.file_exists(FP_i..".wav") then FP_i = FilePath .."-"..i 
+          else FilePath = FP_i..".wav" break
        end
     end
-  return FilePath, Type, Freq, duration 
+  return FilePath, Type, Freq, duration
 end
 
 -------------------------------------------------------------------------------------------------------------------------
