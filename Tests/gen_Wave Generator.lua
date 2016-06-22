@@ -4,7 +4,7 @@
    * Author: EUGEN27771
    * Author URI: http://forum.cockos.com/member.php?u=50462
    * Licence: GPL v3
-   * Version: 1.0
+   * Version: 1.01
   ]]
 
 --------------------------------------------------------------------------------
@@ -303,11 +303,11 @@ end
 ----------------------------------------------------------------------------------------------------
 ---   Controls   -----------------------------------------------------------------------------------
 ----------------------------------------------------------------------------------------------------
-local Gen_btn = Button:new(20,90,220,30, 0.6,0.4,0.4,0.2, "Generate","Arial",15, 0 )
+local Gen_btn = Button:new(20,110,220,30, 0.6,0.4,0.4,0.2, "Generate","Arial",15, 0 )
 Gen_btn.onClick = 
 function()
-    local FilePath, Type, Freq, duration = GetSet_Values()
-    local buf = Gen_Wave(Freq, srate, duration, Type)
+    local FilePath, Type, Freq, Gain, duration = GetSet_Values()
+    local buf = Gen_Wave(Type, Freq, Gain, duration)
     Create_Wave_File(FilePath, buf, audioFormat, nchans, srate, bitspersample)
     reaper.InsertMedia(FilePath, 0) --  mode = 0
 end
@@ -339,11 +339,30 @@ function()
     Frq_sldr.norm_val = math.min(Frq_sldr.norm_val,1)
 end    
 ---------------
-local Slider_TB = {Frq_sldr}
-
+---------------
+local Gain_sldr = H_Slider:new(20,80,220,20, 0.5,0.6,0.4,0.2, "Gain","Arial",15, 0.5 )
+---------
+function Gain_sldr:set_form_val()
+    if self.norm_val<0.001 then self.norm_val=0.001 end
+    local step = 0.01 -- round step
+    self.form_val = 20*math.log(self.norm_val, 10)
+    self.form_val = math.floor(self.form_val/step + 0.5)*step
+end
+---------
+Gain_sldr.onR_Down = 
+function()
+    local ret, UI_val = reaper.GetUserInputs("Gain", 1, "Set Gain", tostring(Gain_sldr.form_val))
+    UI_val = tonumber(UI_val) or Gain_sldr.form_val
+    Gain_sldr.norm_val = 10^(UI_val/20)
+    if Gain_sldr.norm_val>1 then Gain_sldr.norm_val=1 elseif Gain_sldr.norm_val<0.001 then 
+       Gain_sldr.norm_val=0.001
+    end
+end
+---------
+local Slider_TB = {Frq_sldr, Gain_sldr}
 ------------------------------
 ------------------------------
-local W_Frame = Frame:new(10,10,240,120,  0,0.5,0,0.4 )
+local W_Frame = Frame:new(10,10,240,140,  0,0.5,0,0.4 )
 local Frame_TB = {W_Frame}
 
 ----------------------------------------------------------------------------------------------------
@@ -370,7 +389,7 @@ function Init()
     local Wnd_bgd = R + G*256 + B*65536  -- red+green*256+blue*65536  
     local Wnd_Title = "Wave Generator"
     local Wnd_Dock,Wnd_X,Wnd_Y = 0,100,320
-    Wnd_W,Wnd_H = 260,140 -- global values(used for define zoom level)
+    Wnd_W,Wnd_H = 260,160 -- global values(used for define zoom level)
     -- Init window ------
     gfx.clear = Wnd_bgd         
     gfx.init( Wnd_Title, Wnd_W,Wnd_H, Wnd_Dock, Wnd_X,Wnd_Y )
@@ -507,7 +526,7 @@ end
 -- Generate Wave(code from JS) -------------------------------------------------
 --------------------------------------------------------------------------------
 --  Sine, Triangle, Saw, WhiteNoise, PinkNoise -- 
-function Gen_Wave(Freq, srate, duration, Type)
+function Gen_Wave(Type, Freq, Gain, duration)
   local start_time = reaper.time_precise()   -- start time_test
     ------------------
     if not Freq then return end
@@ -543,7 +562,7 @@ function Gen_Wave(Freq, srate, duration, Type)
                  b6 = white * 0.115926; 
           end
           -- to buf ---- 
-          buf[i]   = tone
+          buf[i]   = tone * Gain
           pos = pos+adj
           --------------     
           if pos>=Two_Pi then pos = pos-Two_Pi end
@@ -557,8 +576,9 @@ end
 -- GetSet_Values ---------------------------------------------------------------
 --------------------------------------------------------------------------------
 function GetSet_Values()
-  local Freq = Frq_sldr.form_val
   local Type = Type_cbx.norm_val2[Type_cbx.norm_val]
+  local Freq = Frq_sldr.form_val
+  local Gain = Gain_sldr.norm_val
   local sel_start, sel_end = reaper.GetSet_LoopTimeRange(false, false, 0, 0, false)
   local duration = sel_end - sel_start
   if duration~=0 then reaper.SetEditCurPos(sel_start, true, false) else duration=1 end
@@ -574,7 +594,7 @@ function GetSet_Values()
           else FilePath = FP_i..".wav" break
        end
     end
-  return FilePath, Type, Freq, duration
+  return FilePath, Type, Freq, Gain, duration
 end
 
 -------------------------------------------------------------------------------------------------------------------------
