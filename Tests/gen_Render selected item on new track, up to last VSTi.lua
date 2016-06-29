@@ -43,11 +43,13 @@ function Move_Item(track, item, new_item)
     -- Set track and item parameters  -------
     -----------------------------------------
     reaper.SetMediaItemInfo_Value(item, "B_MUTE", 1)               -- Mute Original Item
-    local ret,Name = reaper.GetSetMediaTrackInfo_String(track, "P_NAME", "", false) -- get orig track name
-    reaper.GetSetMediaTrackInfo_String(new_track, "P_NAME", Name.."(render)", true) -- set new track name
-    reaper.SetMediaTrackInfo_Value(new_track, "B_MAINSEND", 0)     -- No send to master
-    reaper.CreateTrackSend(new_track, track)                       -- Create Send from new_track to orig track 
-    reaper.SetMediaTrackInfo_Value(new_track, "I_FOLDERDEPTH", 0)  -- Set new track norm folder depth
+    local ret,Name = reaper.GetSetMediaTrackInfo_String(track, "P_NAME", "", false) -- Get orig track name
+    reaper.GetSetMediaTrackInfo_String(new_track, "P_NAME", Name.."(render)", true) -- Set new track name
+    reaper.SetMediaTrackInfo_Value(new_track, "B_MAINSEND", 0)     -- No send new track to master track 
+    reaper.CreateTrackSend(new_track, track)                       -- Create Send from new_track to orig track
+    --------
+    reaper.SetTrackSendInfo_Value(new_track, 0, 0, "D_VOL", 1)     -- Set send vol 1.0 = +0dB (if def vol~=1.0)
+    reaper.SetMediaTrackInfo_Value(new_track, "I_FOLDERDEPTH", 0)  -- Set new track normal folder depth
     ---------------------------------
     reaper.TrackList_AdjustWindows(0)                              -- update tracklist
 end
