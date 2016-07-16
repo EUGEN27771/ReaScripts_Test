@@ -1,5 +1,5 @@
 --[[
-   * ReaScript Name:Vox-Deess Enveloper
+   * ReaScript Name:Test DrumTrigger
    * Lua script for Cockos REAPER
    * Author: EUGEN27771
    * Author URI: http://forum.cockos.com/member.php?u=50462
