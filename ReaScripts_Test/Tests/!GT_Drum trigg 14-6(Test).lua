@@ -547,7 +547,7 @@ function Gate_Gl:Apply_toFiltered() -- Transient Gate variant
       -- attack, release Thresholds -----
       local gain_fltr  = 10^(Fltr_Gain.form_val/20)     -- Gain from Fltr_Gain slider(need for gate Threshs)
       local Thresh  = 10^(Gate_Thresh.form_val/20) /gain_fltr * block_size   -- attThresh * fft scale(block_size)
-      minDiff = 10^(Gate_minDiff.form_val/20)
+      local minDiff = 10^(Gate_minDiff.form_val/20)
       -- attack, release Time -----------
       -- Эти параметры нужно либо выносить в доп. настройки, либо подбирать тщательнее...
       local attTime1  = 0.001                            -- Env1 attack(sec)
@@ -562,8 +562,8 @@ function Gate_Gl:Apply_toFiltered() -- Transient Gate variant
       -----------------------------------
       -- Init counters etc --------------
       -----------------------------------
-      rms_val, maxRMS = 0, 0          -- init rms_val, RMS, maxRMS
-      peak_val, maxPeak = 0, 0        -- peak_val, maxPeak
+      local rms_val, maxRMS = 0, 0          -- init rms_val, RMS, maxRMS
+      local peak_val, maxPeak = 0, 0        -- peak_val, maxPeak
       -------------------
       local smpl_cnt  = 0                   -- gate sample counter
       local st_cnt    = 1                   -- gate State_Points counter 
@@ -680,116 +680,6 @@ function Gate_Gl:draw_Lines() -- simple variant without close lines
     end
 end
 
-
-----------------------------------------------------------------------------------
---[[------------------------------------------------------------------------------
-function Gate_Gl:Apply_toFiltered() -- Simple Gate variant
-    -- Это переделывать - !!! Тут все нужно упрощать до предела !!!
-    -- Это только сама идея, но оно уже работает. Вариант с обычным гейтом !!!
-    ---------------------------------------------------
-    local start_time = reaper.time_precise()--time test
-    ---------------------------------------------------
-    ----------------------------
-    -- local func work faster --
-    ----------------------------
-    local sqrt = math.sqrt  
-    local abs  = math.abs
-    local min  = math.min
-    local max  = math.max
-      -----------------------------------------------------
-      -- GetSet Gate Vaules -------------------------------
-      -----------------------------------------------------
-      ------------------------------------- 
-      -- Gate state tables ----------------
-      self.State_Points = {}               -- State_Points table 
-      self.State_Lines  = {}               -- State_Lines  table
-      -------------------------------------
-      -------------------------------------
-      -- attack, release Thresholds -------
-      local gain_fltr  = 10^(Fltr_Gain.form_val/20)     -- Gain from Fltr_Gain slider(need for gate Threshs)
-      local attThresh  = 10^(Gate_attThresh.form_val/20) /gain_fltr * block_size   -- attThresh * fft scale(block_size)
-      local relThresh  = 10^(Gate_relThresh.form_val/20) /gain_fltr * block_size   -- relThresh * fft scale(block_size)
-      -- attack, release Time -----------
-      local attTime  = 0.0001                           -- Need attTime slider??!!!
-      local relTime  = 0.015                            -- Need relTime slider??!!!
-      -- -- -- -- -- -- -- -- -- -- -- -- 
-      local retrigSmpls = Gate_Retrig.form_val/1000*srate      -- Retrig slider to samples
-      local retrig      = retrigSmpls+1                        -- Retrig counter
-      local det_velo_sec = Gate_DetVelo.form_val/1000
-      local detVelo     = math.floor(det_velo_sec*srate + 1)  -- samples -- detVelo slider(time to samples) 
-      -----------------------------------
-      -- Init counters etc --------------
-      local rms_val, maxRMS = 0, 0          -- init rms_val, RMS, maxRMS 
-      -------------------
-      local smpl_cnt  = 0                   -- gate sample counter
-      local st_cnt    = 1                   -- gate State_Points counter 
-      -------------------
-      local sel_start = Wave.sel_start - det_velo_sec -- sel_start(and compensation  det_velo_sec)
-      local last_trig = -retrigSmpls*2
-      local envOut = 0                                -- Peak envelope follower
-      local Trig,GetSmpls = false, false              -- trigger output 
-      -- Compute sample frequency related coeffs
-      local ga = math.exp(-1/(srate*attTime))   -- attack coeff
-      local gr = math.exp(-1/(srate*relTime))   -- release coeff
-       
-       -----------------------------------------------------------------
-       -- Gate main for ------------------------------------------------
-       -----------------------------------------------------------------
-       for i = 1, Wave.Samples*2, 2 do
-           local envIn = abs(Wave.out_buf[i]) -- abs smpl val(abs envelope)
-           --------------------------------------
-           -- Envelope --------------------------
-           if envOut < envIn then envOut = envIn -- If need attTime>0 -> envOut = envIn + ga * (envOut - envIn) !!! 
-              else envOut = envIn + gr * (envOut - envIn)
-           end
-           
-           --------------------------------------
-           -- Trigger ---------------------------  
-           if (not Trig) and retrig>retrigSmpls then
-              -- open ------
-              if envOut > attThresh then
-                 Trig = true; GetSmpls = true; retrig = 0; -- reset
-              end
-              -- close -----
-            else if envOut < relThresh then 
-                    Trig = false;
-                 end            
-           end
-           --------------------------------------
-           -- Get velo --------------------------
-           if GetSmpls then
-              if smpl_cnt<=detVelo then 
-                 rms_val  = rms_val + Wave.out_buf[i] * Wave.out_buf[i]
-                 smpl_cnt = smpl_cnt+1 
-                 ---------------------------     
-                 else 
-                      local RMS = sqrt(rms_val/detVelo)
-                      GetSmpls = false
-                      smpl_cnt = 0
-                      rms_val = 0    
-                      --- open point -----
-                      self.State_Points[st_cnt] = true                                -- State
-                      self.State_Points[st_cnt+1] = sel_start + ((i-1)/2)/srate       -- Time point sec
-                      self.State_Points[st_cnt+2] = RMS
-                      --- open line ------
-                      self.State_Lines[st_cnt] = true                                  -- State
-                      self.State_Lines[st_cnt+1] = ((i-1)/2 - detVelo) * Wave.X_scale  -- Time point in gfx
-                      self.State_Lines[st_cnt+2] = RMS 
-                      --------
-                      maxRMS = max(maxRMS, RMS) -- save maxRMS for scaling                
-                      --------
-                      st_cnt = st_cnt+3
-                      -------------   
-               end
-           end       
-           --------------------------------------     
-           retrig = retrig+1;
-       end
-    --------------------------
-    self.maxRMS = maxRMS  -- store maxRMS for scaling MIDI velo 
-    -----------------------------
-    --reaper.ShowConsoleMsg("Gate time = " .. reaper.time_precise()-start_time .. '\n')--time test
-end--]]
 
 ------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------
