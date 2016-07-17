@@ -943,18 +943,21 @@ function Wave:draw_block(r,g,b,a) -- Mod Draw(for A_Blocks)
   local Xsc  = self.X_scale * (self.pix_dens/2) 
   local Ysc  = self.Y_scale
   local Y = self.Y
+  local X = block_X -- start position
   ---------
   local setpixel = gfx.setpixel -- немного быстрее, совсем чуток 5-11%, по-разному - но закономерно
   ---------
-  local X = block_X -- start position
   ---------
+  local buf
+  -- здесь тоже с таблицей работает чуть быстрее, чем с reaper.array(но на низкой плотности даже медленне)
+  if self.pix_dens<=6 then buf = self.buffer.table() else buf = self.buffer end
+  ---------   
   gfx.a = a
-  XXX = self.pix_dens
   for i = crsx+1, Xblock*2+crsx, self.pix_dens do 
-     gfx.x = X                          -- set x coord
-     gfx.y = Y - self.buffer[i] *Ysc    -- set y coord
-     setpixel(r,g,b)                    -- setpixel
-     X = X + Xsc                        -- to next smpl (Вычисление(по оси x) через сложение, чуть быстрее !!!)
+     gfx.x = X                     -- set x coord
+     gfx.y = Y - buf[i] *Ysc       -- set y coord
+     setpixel(r,g,b)               -- setpixel
+     X = X + Xsc                   -- to next smpl (Вычисление(по оси x) через сложение, чуть быстрее !!!)
   end
 end
 --------------------------------------------------------------------------------
@@ -1033,7 +1036,7 @@ function Wave:DRAW() -- New variant
   ------------------------------------------------------
   self:draw_Filtered(0.7,0.1,0.3,1) -- New Mod Draw
   ------------------------------------------------------
-  reaper.ShowConsoleMsg("Filter time = " .. reaper.time_precise()-start_time .. '\n')--time test 
+  --reaper.ShowConsoleMsg("Filter time = " .. reaper.time_precise()-start_time .. '\n')--time test 
   -------------------------
   self.State = true
   gfx.dest   = -1 -- set main dest
