@@ -931,9 +931,9 @@ function Wave:Set_Coord()
 
 end
 
----------------------------------------------------------------------------------
---- Draw Original ---------------------------------------------------------------
-----------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--- Draw Original --------------------------------------------------------------
+--------------------------------------------------------------------------------
 function Wave:draw_block(r,g,b,a) -- Mod Draw(for A_Blocks)
   -- Это все нужно оптимизировать и переделывать !!!
   -- local - Чуть быстрее, незначительно, но все же...
@@ -957,27 +957,24 @@ function Wave:draw_block(r,g,b,a) -- Mod Draw(for A_Blocks)
      X = X + Xsc                        -- to next smpl (Вычисление(по оси x) через сложение, чуть быстрее !!!)
   end
 end
----------------------------------------------------------------------------------
---- Draw Filtered ---------------------------------------------------------------
----------------------------------------------------------------------------------
-function Wave:draw_blockFltr(r,g,b,a) -- Mod Draw(for A_Blocks)
-  -- Это все нужно оптимизировать и переделывать !!!
+--------------------------------------------------------------------------------
+--- Draw Filtered --------------------------------------------------------------
+--------------------------------------------------------------------------------
+--- Draw Filtered(Variant with full buffer) ------------------
+function Wave:draw_Filtered(r,g,b,a) -- New Mod Draw
   -- local - Чуть быстрее, незначительно, но все же...
-  local crsx = block_size/8                                  -- It must def in future
-  local Xblock = block_size-crsx*2                           -- active part of full block
-  local block_X = self.block_X
   local Xsc  = self.X_scale * (self.pix_dens/2) 
   local Ysc  = self.Y_scaleFltr
   local Y = self.Y
   ---------
   local setpixel = gfx.setpixel -- немного быстрее, совсем чуток 5-11%, по-разному - но закономерно
   ---------
-  local X = block_X -- start position
+  local X = 0 -- start position
   ---------
   gfx.a = a
-  for i = crsx+1, Xblock*2+crsx, self.pix_dens do 
+  for i = 1, #self.out_buf, self.pix_dens do 
       gfx.x = X                          -- set x coord
-      gfx.y = Y - self.buffer[i] *Ysc    -- set y coord
+      gfx.y = Y - self.out_buf[i] *Ysc   -- set y coord
       setpixel(r,g,b)                    -- setpixel
       X = X + Xsc                        -- to next smpl (Вычисление(по оси x) через сложение, чуть быстрее !!!)
   end
@@ -1013,14 +1010,12 @@ function Wave:DRAW() -- New variant
    
   ------------------------------------------------
   for block=1, self.A_Blocks do reaper.GetAudioAccessorSamples(self.AA,srate,n_chans,self.block_start,block_size,self.buffer)
-      -- Original ---
+      -- Draw Original ---
       self.block_X = (block-1)* Xblock * self.X_scale  -- X-offs for draw each block
       self:draw_block(0.3,0.4,0.7,1)     -- draw original wave
-      ---------------
+      --------------------
       self:Filter_FFT(lowband, hiband, out_scale)      -- Filter(note: don't use out of range freq!)
       out_buf.copy(self.buffer, crsx+1, n_chans*Xblock, (block-1)* n_chans*Xblock + 1   ) -- copy block to main out buffer
-      -- Filtered ---
-      self:draw_blockFltr(0.7,0.1,0.3,1) -- draw filtered wave
       ---------------
       ---------------
       self.block_start = self.block_start + Xblock/srate  -- next block start_time
@@ -1033,9 +1028,12 @@ function Wave:DRAW() -- New variant
   ---------------------------------------------------------------------------------------------------------
   self.out_buf = out_buf.table()  -- Table variant
   -- MEM2 = collectgarbage ("count") -- garbage test 
-  -----------------------------------------------
-  -----------------------------------------------
-  --reaper.ShowConsoleMsg("Filter time = " .. reaper.time_precise()-start_time .. '\n')--time test 
+  ------------------------------------------------------
+  --  Draw Filtered(Variant with full buffer) ----------
+  ------------------------------------------------------
+  self:draw_Filtered(0.7,0.1,0.3,1) -- New Mod Draw
+  ------------------------------------------------------
+  reaper.ShowConsoleMsg("Filter time = " .. reaper.time_precise()-start_time .. '\n')--time test 
   -------------------------
   self.State = true
   gfx.dest   = -1 -- set main dest
