@@ -1,12 +1,15 @@
 --[[
-   * ReaScript Name:Test DrumTrigger
+   * ReaScript Name:Drums to MIDI(test version)
    * Lua script for Cockos REAPER
    * Author: EUGEN27771
    * Author URI: http://forum.cockos.com/member.php?u=50462
    * Licence: GPL v3
    * Version: 1.0
   ]]
-
+--[[
+   * Внимание, это тестовая версия!
+   * В дальнейшем все будет переделываться.
+]]
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 Mcnt=0
@@ -499,10 +502,15 @@ local VeloMode = CheckBox:new(590,410,50,18,   0.3,0.5,0.5,0.3, "","Arial",15,  
                               {"RMS","Peak"} )
 
 VeloMode.onClick = Gate_Sldrs_onUp
+--------------
+local DrawMode = CheckBox:new(950,380,70,18,   0.3,0.5,0.5,0.3, "Draw: ","Arial",15,  3,
+                              {"Very Slow","Slow", "Medium1","Medium2", "Fast","Very Fast"} )
+
+DrawMode.onClick = Fltr_Sldrs_onUp
 -----------------------------------
 --- CheckBox_TB -------------------
 -----------------------------------
-local CheckBox_TB = {VeloMode}
+local CheckBox_TB = {VeloMode,DrawMode}
 
 ----------------------------------------------------------------------------------------------------
 ----------------------------------------------------------------------------------------------------
@@ -876,6 +884,7 @@ function Wave:Filter_FFT(lowband, hiband, out_scale) -- Filter
     ----------------------------------------
     buf.fft(block_size,true)       -- FFT
     --------------------------------
+    --lowband = 0; hiband = 16384 -- ITS FOR DRAW TEST ONLY(Del it !!!)
     -- Clear lowband bins --
     buf.clear(0, 1, lowband)                      -- clear start part
     buf.clear(0,  block_size*2 - lowband + 1 )    -- clear end part
@@ -913,6 +922,7 @@ function Wave:Set_Coord()
     --self.pix_dens   = math.ceil(self.Samples/(1024*256)*4)*2   -- Pixel density for wave drawing
     --self.pix_dens   = math.ceil(self.Samples/(1024*1024*2))   -- Pixel density for test speed wave drawing 1
     self.pix_dens   = math.ceil(self.Samples/(1024*1024*2))*2     -- Pixel density for test speed wave drawing 2
+    self.pix_dens   = math.ceil(self.Samples/(1024*1024*2))*2*DrawMode.norm_val -- Pixel density for test speed wave drawing 3(from DrawMode)
     self.X, self.Y  = x, h/2                            -- waveform position(X,Y axis)
     self.X_scale    = w/self.Samples                    -- X_scale = w/lenght in samples
     self.Y_scale    = h/2                               -- Y_scale for waveform drawing
@@ -930,15 +940,21 @@ function Wave:draw_block(r,g,b,a) -- Mod Draw(for A_Blocks)
   local crsx = block_size/8                                  -- It must def in future
   local Xblock = block_size-crsx*2                           -- active part of full block
   local block_X = self.block_X
-  local Xsc2 = self.X_scale/2 
+  local Xsc  = self.X_scale * (self.pix_dens/2) 
   local Ysc  = self.Y_scale
   local Y = self.Y
   ---------
+  local setpixel = gfx.setpixel -- немного быстрее, совсем чуток 5-11%, по-разному - но закономерно
+  ---------
+  local X = block_X -- start position
+  ---------
   gfx.a = a
-  for i = 1, Xblock*2, self.pix_dens do 
-      gfx.x = block_X +  (i-1) *Xsc2              -- (i+1)/2 *self.X_scale(old var) 
-      gfx.y = Y - self.buffer[i+crsx] *Ysc
-      gfx.setpixel(r,g,b) -- setpixel
+  XXX = self.pix_dens
+  for i = crsx+1, Xblock*2+crsx, self.pix_dens do 
+     gfx.x = X                          -- set x coord
+     gfx.y = Y - self.buffer[i] *Ysc    -- set y coord
+     setpixel(r,g,b)                    -- setpixel
+     X = X + Xsc                        -- to next smpl (Вычисление(по оси x) через сложение, чуть быстрее !!!)
   end
 end
 ---------------------------------------------------------------------------------
@@ -950,15 +966,20 @@ function Wave:draw_blockFltr(r,g,b,a) -- Mod Draw(for A_Blocks)
   local crsx = block_size/8                                  -- It must def in future
   local Xblock = block_size-crsx*2                           -- active part of full block
   local block_X = self.block_X
-  local Xsc2 = self.X_scale/2 
+  local Xsc  = self.X_scale * (self.pix_dens/2) 
   local Ysc  = self.Y_scaleFltr
   local Y = self.Y
   ---------
+  local setpixel = gfx.setpixel -- немного быстрее, совсем чуток 5-11%, по-разному - но закономерно
+  ---------
+  local X = block_X -- start position
+  ---------
   gfx.a = a
-  for i = 1, Xblock*2, self.pix_dens do 
-      gfx.x = block_X +  (i-1) *Xsc2              -- (i+1)/2 *self.X_scale(old var) 
-      gfx.y = Y - self.buffer[i+crsx] *Ysc
-      gfx.setpixel(r,g,b) -- setpixel
+  for i = crsx+1, Xblock*2+crsx, self.pix_dens do 
+      gfx.x = X                          -- set x coord
+      gfx.y = Y - self.buffer[i] *Ysc    -- set y coord
+      setpixel(r,g,b)                    -- setpixel
+      X = X + Xsc                        -- to next smpl (Вычисление(по оси x) через сложение, чуть быстрее !!!)
   end
 end
 
