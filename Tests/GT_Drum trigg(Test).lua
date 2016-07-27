@@ -7,9 +7,8 @@
    * Version: 1.0
   ]]
 --[[
-   * Внимание, это тестовая версия!
-   * В дальнейшем все будет переделываться.
-]]
+   * Внимание, это тестовая версия!!!
+--]]
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 Mcnt=0
@@ -20,8 +19,8 @@ end
 --   Some Default Values   -----------------------------------------------------
 --------------------------------------------------------------------------------
 local srate = 44100     -- fix it, need get real srate from proj or source
-local block_size = 1024*16--32 -- Block size
-local n_chans = 2       -- num_chans(for track default,for take use source n_chans) 
+local block_size = 1024*16 -- Block size
+local n_chans = 2       -- num_chans
 
 --------------------------------------------------------------------------------
 ---   Simple Element Class   ---------------------------------------------------
@@ -311,7 +310,6 @@ end
 ----------------------------------------------------------------------------------------
 local Wave = Element:new(10,10,1024,350)
 ------------------
-local Filter_B = {}
 local Gate_Gl  = {}
 ------------------
 ---------------------------------------------------------------
@@ -439,7 +437,7 @@ local Gate_Retrig = H_Slider:new(250,425,290,18, 0.3,0.5,0.5,0.3, "Retrig","Aria
   -- onUp function for Gate sliders ------
   ----------------------------------------
   function Gate_Sldrs_onUp() 
-      if Wave.State then Gate_Gl:Apply_toFiltered() end 
+     if Wave.State then Gate_Gl:Apply_toFiltered() end 
   end
 ----------------
 Gate_Thresh.onUp   = Gate_Sldrs_onUp
@@ -458,14 +456,11 @@ local Slider_TB = {HP_Freq,LP_Freq,Fltr_Gain, Gate_Thresh, Gate_minDiff, Gate_De
 local Detect = Button:new(20,380,180,25, 0.4,0.12,0.12,0.3, "Get Selection",    "Arial",15 )
   Detect.onClick = 
   function()
-    local start_time = reaper.time_precise() 
-      if Wave:Create_Track_Accessor() then 
-           Wave:Processing()
-           if Wave.State then
-              Gate_Gl:Apply_toFiltered()
-           end
-      end 
-    --reaper.ShowConsoleMsg("Full Process time = " .. reaper.time_precise()-start_time .. '\n')--time test 
+     local start_time = reaper.time_precise() 
+     if Wave:Create_Track_Accessor() then Wave:Processing()
+        if Wave.State then Gate_Gl:Apply_toFiltered() end
+     end 
+     --reaper.ShowConsoleMsg("Full Process time = " .. reaper.time_precise()-start_time .. '\n')--time test 
   end
 ----------------------------------- 
 local Create_MIDI = Button:new(590,380,200,25, 0.4,0.12,0.12,0.3, "Create_MIDI",    "Arial",15 )
@@ -886,7 +881,7 @@ function Wave:draw_waveform(mode, r,g,b,a)
     local p = math.ceil(Ppos+1)
     gfx.set(r,g,b,a)                       -- set color
     ----------------------------------------------
-    local w = self.def_xywh[3] -- 1024=def width
+    local w = self.def_xywh[3] -- 1024 = def width
     for i=1, w do            
        local next = i*Zfact + Ppos
        local min_peak, max_peak, peak = 0, 0, 0 
@@ -902,7 +897,7 @@ function Wave:draw_waveform(mode, r,g,b,a)
           end
           ----- 
         local y, y2 = Y - min_peak *Ysc, Y - max_peak *Ysc 
-        gfx.line(i,y, i,y2) -- (x,y,x2,y2[,aa]) - здесь всегда x=i (or i-1 ?)
+        gfx.line(i,y, i,y2) -- (x,y,x2,y2[,aa]) - здесь всегда x=i
     end  
     ----------------------------------------------
 end
@@ -919,7 +914,7 @@ function Wave:Create_Peaks(mode)
     local max = math.max
     ----------------------------
     local Peak_TB = {}
-    local w = self.def_xywh[3] -- 1024=def width 
+    local w = self.def_xywh[3] -- 1024 = def width 
     local pix_dens = self.pix_dens
     local smpl_inpix = (self.Samples*n_chans/w) /self.max_Zoom  -- кол-во семплов на один пик (1024 = def gfx w)
     local s=1
