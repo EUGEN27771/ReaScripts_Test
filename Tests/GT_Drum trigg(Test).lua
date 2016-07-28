@@ -482,7 +482,9 @@ local CreateMIDIMode = CheckBox:new(650,410,140,18,   0.3,0.5,0.3,0.3, "","Arial
                               {"Create New Item","Use Selected Item"} )
 --------------
 local OutNote  = CheckBox:new(590,410,50,18,  0.3,0.5,0.3,0.3, "","Arial",15,  1,
-                              {"36","38","40","42","44","46","48"} )
+                              --{"36","38","40","42","44","46","48"} 
+                                {36,37,38,39,40,41,42,43,44,45,46,47}
+                              )
 -----------------
 -----------------
 local VeloMode = CheckBox:new(590,440,50,18,  0.3,0.5,0.5,0.3, "","Arial",15,  1,
@@ -500,27 +502,27 @@ DrawMode.onClick = Fltr_Sldrs_onUp
 -----------------------------------
 local CheckBox_TB = {CreateMIDIMode,OutNote,VeloMode, DrawMode}
 
-----------------------------------------------------------------------------------------------------
-----------------------------------------------------------------------------------------------------
-----------------------------------------------------------------------------------------------------
 
+
+----------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------
+-- Some used functions(local func work faster) --
+-------------------------------------------------
+local abs  = math.abs
+local min  = math.min
+local max  = math.max
+local sqrt = math.sqrt  
 
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 ---   Gate  --------------------------------------------------------------------
 --------------------------------------------------------------------------------
 function Gate_Gl:Apply_toFiltered()
-    -- Это переделывать - !!! - нужно упрощать до предела !!!
     ---------------------------------------------------
     local start_time = reaper.time_precise()--time test
     ---------------------------------------------------
-    ----------------------------
-    -- local func work faster --
-    ----------------------------
-    local sqrt = math.sqrt  
-    local abs  = math.abs
-    local min  = math.min
-    local max  = math.max
       -------------------------------------------------
       -- GetSet Gate Vaules ---------------------------
       -------------------------------------------------
@@ -542,26 +544,25 @@ function Gate_Gl:Apply_toFiltered()
       local attTime2  = 0.007                            -- Env2 attack(sec)
       local relTime1  = 0.010                            -- Env1 release(sec)
       local relTime2  = 0.015                            -- Env2 release(sec)
-      -- -- -- -- -- -- -- -- -- -- -- -- 
-      local retrigSmpls  = Gate_Retrig.form_val/1000*srate      -- Retrig slider to samples
-      local retrig       = retrigSmpls+1                        -- Retrig counter
-      local det_velo_sec = Gate_DetVelo.form_val/1000
-      local detVelo      = math.floor(det_velo_sec*srate + 1)   -- samples -- detVelo slider(time to samples) 
       -----------------------------------
       -- Init counters etc --------------
+      ----------------------------------- 
+      local retrigSmpls  = Gate_Retrig.form_val/1000*srate      -- Retrig slider to samples
+      local retrig       = retrigSmpls+1                        -- Retrig counter
+      local det_velo_sec = Gate_DetVelo.form_val/1000           -- DetVelo slider to sec
+      local detVelo      = math.floor(det_velo_sec*srate + 1)   -- DetVelo slider to samples 
       -----------------------------------
-      local rms_val,  maxRMS  = 0, 0        -- init rms_val, RMS, maxRMS
-      local peak_val, maxPeak = 0, 0        -- peak_val, maxPeak
+      local rms_sum,   maxRMS  = 0, 0       -- init rms_sum,   maxRMS
+      local peak_smpl, maxPeak = 0, 0       -- init peak_smpl, maxPeak
       -------------------
-      local smpl_cnt  = 0                   -- gate sample counter
-      local st_cnt    = 1                   -- gate State_Points counter 
+      local smpl_cnt  = 0                   -- Gate sample(for get velo) counter
+      local st_cnt    = 1                   -- Gate State counter for State tables
       -------------------
-      local sel_start = Wave.sel_start - det_velo_sec -- sel_start(and compensation  det_velo_sec)
-      local last_trig = -retrigSmpls*2
+      local sel_start = Wave.sel_start - det_velo_sec -- sel_start(and compensation - det_velo_sec) for time points
       -------------------
-      local envOut1 = Wave.out_buf[1]                 -- Peak envelope1 follower
-      local envOut2 = envOut1                         -- Peak envelope2 follower
-      local Trig,GetSmpls = false, false              -- trigger output 
+      local envOut1 = Wave.out_buf[1]        -- Peak envelope1 follower start value
+      local envOut2 = envOut1                -- Peak envelope2 follower start value
+      local GetSmpls = false                 -- Trigger, GetSmpls init state 
       -------------------------------------------------
       -- Compute sample frequency related coeffs ------ 
       local ga1 = math.exp(-1/(srate*attTime1))   -- attack1 coeff
@@ -591,49 +592,47 @@ function Gate_Gl:Apply_toFiltered()
            -- Trigger ---------------------------  
            if retrig>retrigSmpls then
               if envOut1>Thresh and (envOut1/envOut2) > minDiff then
-                 Trig = true; GetSmpls = true; retrig = 0; rms_val, peak_val = 0, 0 -- reset
+                 GetSmpls = true; smpl_cnt = 0; retrig = 0; rms_sum, peak_smpl = 0, 0 -- set start-capture values
               end
-            else envOut2 = envOut1 -- !!!          
+            else envOut2 = envOut1 -- уравнивает огибающие, здесь это важно!!!          
            end
-           --------------------------------------
-           -- Get velo --------------------------
+           ------------------------------------------------------------
+           -- Get velo ------------------------------------------------
+           ------------------------------------------------------------
            if GetSmpls then
               if smpl_cnt<=detVelo then 
-                 rms_val  = rms_val + Wave.out_buf[i] * Wave.out_buf[i]
-                 peak_val = max(peak_val, Wave.out_buf[i])
+                 rms_sum   = rms_sum + Wave.out_buf[i] * Wave.out_buf[i]   -- get rms_sum for note-velo
+                 peak_smpl = max(peak_smpl, Wave.out_buf[i])               -- find peak_smpl for note-velo
                  smpl_cnt = smpl_cnt+1 
                  ---------------------------     
                  else 
-                      local RMS  = sqrt(rms_val/detVelo)
-                      local Peak = peak_val
-                      -- -- -- -- -- -- --
-                      GetSmpls = false
-                      smpl_cnt = 0
-                      rms_val  = 0    
+                      GetSmpls = false -- reset GetSmpls state !!!
+                      --------------------
+                      local RMS  = sqrt(rms_sum/detVelo)  -- calculate RMS
                       --- open point -----
-                      self.State_Points[st_cnt] = true                             -- State
+                      self.State_Points[st_cnt] = true                             -- State - нужно в другом гейте, или нах?? 
                       self.State_Points[st_cnt+1] = sel_start + ((i-1)/2)/srate    -- Time point(sec)
                       if VeloMode.norm_val==1 then
-                             self.State_Points[st_cnt+2] = RMS                     -- RMS var
-                        else self.State_Points[st_cnt+2] = Peak                    -- Peak var
+                             self.State_Points[st_cnt+2] = RMS                     -- RMS mode
+                        else self.State_Points[st_cnt+2] = peak_smpl               -- Peak mode
                       end
                       --- open line ------
-                      self.State_Lines[st_cnt] = true                                  -- State
+                      self.State_Lines[st_cnt] = true                                  -- State - нужно в другом гейте, или нах?? 
                       self.State_Lines[st_cnt+1] = ((i-1)/2 - detVelo) * Wave.X_scale  -- Time point in gfx
                       if VeloMode.norm_val ==1 then
-                             self.State_Lines[st_cnt+2] = RMS                      -- RMS var
-                        else self.State_Lines[st_cnt+2] = Peak                     -- Peak var
+                             self.State_Lines[st_cnt+2] = RMS                      -- RMS mode
+                        else self.State_Lines[st_cnt+2] = peak_smpl                -- Peak mode
                       end
                       --------
-                      maxRMS = max(maxRMS, RMS) -- save maxRMS for scaling
-                      maxPeak = max(maxPeak, Peak)                
+                      maxRMS  = max(maxRMS, RMS)         -- save maxRMS for scaling
+                      maxPeak = max(maxPeak, peak_smpl)  -- save maxPeak for scaling             
                       --------
                       st_cnt = st_cnt+3
                       --------------------
-               end
+              end
            end       
            --------------------------------------     
-           retrig = retrig+1;
+           retrig = retrig+1
        end
     -----------------------------
     self.maxRMS  = maxRMS   -- store maxRMS for scaling MIDI velo
@@ -643,7 +642,7 @@ function Gate_Gl:Apply_toFiltered()
 
     -----------------------------
     -----------------------------
-    if CreateMIDIMode.norm_val == 2 then Wave:Create_MIDI() end
+    if CreateMIDIMode.norm_val == 2 then Wave:Create_MIDI() end -- Auto-create MIDI, when mode == 2(use sel item)
 
 end
 
@@ -873,8 +872,6 @@ function Wave:draw_waveform(mode, r,g,b,a)
     end 
     ----------------------------
     ----------------------------
-    local min = math.min
-    local max = math.max
     ----------------------------
     local Zfact = self.max_Zoom/self.Zoom  -- zoom factor
     local Ppos = self.Pos*self.max_Zoom    -- старт. позиция в "мелкой"-Peak_TB для начала прорисовки  
@@ -910,8 +907,6 @@ function Wave:Create_Peaks(mode)
                else buf = self.out_buf   -- for output(filtered)
     end
     ----------------------------
-    local min = math.min
-    local max = math.max
     ----------------------------
     local Peak_TB = {}
     local w = self.def_xywh[3] -- 1024 = def width 
