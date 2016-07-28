@@ -694,7 +694,7 @@ function Wave:GetSet_MIDITake()
       reaper.TrackList_AdjustWindows(0)
       item = reaper.CreateNewMIDIItemInProj(midi_track, self.sel_start, self.sel_start+self.sel_len, false)
       take = reaper.GetActiveTake(item)
-      return take
+      return item, take
      ------------
     elseif CreateMIDIMode.norm_val == 2 then   -- for selected item --------
       item = reaper.GetSelectedMediaItem(0, 0)
