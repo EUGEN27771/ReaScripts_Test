@@ -404,8 +404,8 @@ local Gate_Thresh = H_Slider:new(250,380,290,20, 0.3,0.5,0.7,0.3, "Threshold","A
     end
   end
 ----------------
-local Gate_minDiff = H_Slider:new(250,405,290,18, 0.3,0.5,0.7,0.3, "Sensetive","Arial",15, 0.2 )
-  function Gate_minDiff:draw_val()
+local Gate_Sensetive = H_Slider:new(250,405,290,18, 0.3,0.5,0.7,0.3, "Sensetive","Arial",15, 0.2 )
+  function Gate_Sensetive:draw_val()
     self.form_val = 2+(self.norm_val)*15
     local x,y,w,h  = self.x,self.y,self.w,self.h
     local val = string.format("%.1f", self.form_val).." dB"
@@ -443,14 +443,14 @@ local Gate_Retrig = H_Slider:new(250,425,290,18, 0.3,0.5,0.5,0.3, "Retrig","Aria
   end
 ----------------
 Gate_Thresh.onUp   = Gate_Sldrs_onUp
-Gate_minDiff.onUp  = Gate_Sldrs_onUp
+Gate_Sensetive.onUp  = Gate_Sldrs_onUp
 Gate_DetVelo.onUp  = Gate_Sldrs_onUp
 Gate_Retrig.onUp   = Gate_Sldrs_onUp
 
 -----------------------------------
 --- Slider_TB ---------------------
 -----------------------------------
-local Slider_TB = {HP_Freq,LP_Freq,Fltr_Gain, Gate_Thresh, Gate_minDiff, Gate_DetVelo,Gate_Retrig }
+local Slider_TB = {HP_Freq,LP_Freq,Fltr_Gain, Gate_Thresh, Gate_Sensetive, Gate_DetVelo,Gate_Retrig }
 
 ------------------------------------------------------------------------------------
 --- Buttons ------------------------------------------------------------------------
@@ -484,9 +484,7 @@ local CreateMIDIMode = CheckBox:new(650,410,140,18,   0.3,0.5,0.3,0.3, "","Arial
                               {"Create New Item","Use Selected Item"} )
 --------------
 local OutNote  = CheckBox:new(590,410,50,18,  0.3,0.5,0.3,0.3, "","Arial",15,  1,
-                              --{"36","38","40","42","44","46","48"} 
-                                {36,37,38,39,40,41,42,43,44,45,46,47}
-                              )
+                              {36,37,38,39,40,41,42,43,44,45,46,47} )
 -----------------
 -----------------
 local VeloMode = CheckBox:new(590,440,50,18,  0.3,0.5,0.5,0.3, "","Arial",15,  1,
@@ -537,9 +535,9 @@ function Gate_Gl:Apply_toFiltered()
       -- GetSet parameters ----------------------------
       -------------------------------------------------
       -- attack, release Thresholds -----
-      local gain_fltr  = 10^(Fltr_Gain.form_val/20)     -- Gain from Fltr_Gain slider(need for gate Threshs)
-      local Thresh  = 10^(Gate_Thresh.form_val/20)/gain_fltr * block_size   -- attThresh * fft scale(block_size)
-      local minDiff = 10^(Gate_minDiff.form_val/20)
+      local gain_fltr  = 10^(Fltr_Gain.form_val/20)       -- Gain from Fltr_Gain slider(need for scaling gate Thresh!)
+      local Thresh     = 10^(Gate_Thresh.form_val/20)/gain_fltr * block_size   -- attThresh * fft scale(block_size)
+      local Sensetive  = 10^(Gate_Sensetive.form_val/20)  -- Gate "Sensetive", diff between - fast and slow envelopes(in dB)
       -- attack, release Time -----------
       -- Эти параметры нужно либо выносить в доп. настройки, либо подбирать тщательнее...
       local attTime1  = 0.001                            -- Env1 attack(sec)
@@ -549,10 +547,10 @@ function Gate_Gl:Apply_toFiltered()
       -----------------------------------
       -- Init counters etc --------------
       ----------------------------------- 
-      local retrigSmpls  = Gate_Retrig.form_val/1000*srate      -- Retrig slider to samples
-      local retrig       = retrigSmpls+1                        -- Retrig counter
-      local det_velo_sec = Gate_DetVelo.form_val/1000           -- DetVelo slider to sec
-      local detVelo      = math.floor(det_velo_sec*srate + 1)   -- DetVelo slider to samples 
+      local retrig_smpls = math.floor(Gate_Retrig.form_val/1000*srate)  -- Retrig slider to samples
+      local retrig       = retrig_smpls+1                               -- Retrig counter start value!
+      local det_velo_sec    = Gate_DetVelo.form_val/1000        -- DetVelo slider to sec
+      local det_velo_smpls  = math.floor(det_velo_sec*srate)    -- DetVelo slider to samples 
       -----------------------------------
       local rms_sum,   maxRMS  = 0, 0       -- init rms_sum,   maxRMS
       local peak_smpl, maxPeak = 0, 0       -- init peak_smpl, maxPeak
@@ -592,9 +590,9 @@ function Gate_Gl:Apply_toFiltered()
            
            --------------------------------------
            -- Trigger ---------------------------  
-           if retrig>retrigSmpls then
-              if envOut1>Thresh and (envOut1/envOut2) > minDiff then
-                 GetSmpls = true; smpl_cnt = 0; retrig = 0; rms_sum, peak_smpl = 0, 0 -- set start-capture values
+           if retrig>retrig_smpls then
+              if envOut1>Thresh and (envOut1/envOut2) > Sensetive then
+                 GetSmpls = true; smpl_cnt = 0; retrig = 0; rms_sum, peak_smpl = 0, 0 -- set start-values(for capture velo)
               end
             else envOut2 = envOut1 -- уравнивает огибающие, здесь это важно!!!          
            end
@@ -602,7 +600,7 @@ function Gate_Gl:Apply_toFiltered()
            -- Get velo ------------------------------------------------
            ------------------------------------------------------------
            if GetSmpls then
-              if smpl_cnt<=detVelo then 
+              if smpl_cnt<=det_velo_smpls then 
                  rms_sum   = rms_sum + Wave.out_buf[i] * Wave.out_buf[i]   -- get rms_sum for note-velo
                  peak_smpl = max(peak_smpl, Wave.out_buf[i])               -- find peak_smpl for note-velo
                  smpl_cnt = smpl_cnt+1 
@@ -610,7 +608,7 @@ function Gate_Gl:Apply_toFiltered()
                  else 
                       GetSmpls = false -- reset GetSmpls state !!!
                       --------------------
-                      local RMS  = sqrt(rms_sum/detVelo)  -- calculate RMS
+                      local RMS  = sqrt(rms_sum/det_velo_smpls)  -- calculate RMS
                       --- open point -----
                       self.State_Points[st_cnt] = true                             -- State - нужно в другом гейте, или нах?? 
                       self.State_Points[st_cnt+1] = sel_start + ((i-1)/2)/srate    -- Time point(sec)
@@ -619,8 +617,8 @@ function Gate_Gl:Apply_toFiltered()
                         else self.State_Points[st_cnt+2] = peak_smpl               -- Peak mode
                       end
                       --- open line ------
-                      self.State_Lines[st_cnt] = true                                  -- State - нужно в другом гейте, или нах?? 
-                      self.State_Lines[st_cnt+1] = ((i-1)/2 - detVelo) * Wave.X_scale  -- Time point in gfx
+                      self.State_Lines[st_cnt] = true                              -- State - нужно в другом гейте, или нах?? 
+                      self.State_Lines[st_cnt+1] = ((i-1)/2 - det_velo_smpls) * Wave.X_scale  -- Time point in gfx
                       if VeloMode.norm_val ==1 then
                              self.State_Lines[st_cnt+2] = RMS                      -- RMS mode
                         else self.State_Lines[st_cnt+2] = peak_smpl                -- Peak mode
@@ -728,7 +726,8 @@ function Wave:Create_MIDI()
     local item, take = Wave:GetSet_MIDITake()
     if not take then return end 
     -- Note parameters ---------
-    local pitch = tonumber(OutNote.norm_val2[OutNote.norm_val]) -- переделывать эту чушь..
+    --local pitch = tonumber( string.match(OutNote.norm_val2[OutNote.norm_val], "%((%d+)") ) -- переделывать эту чушь..
+    local pitch = OutNote.norm_val2[OutNote.norm_val]
     local len = 60
     local sel, mute, chan = 1, 0, 0
     local startppqpos, endppqpos, vel
@@ -1031,7 +1030,7 @@ function Wave:Get_Cursor()
 end 
 --------------------------
 function Wave:Set_Cursor()
-  if self:mouseDown() then  
+  if self:mouseDown() and not(Ctrl or Shift) then  
     if self.insrc_mx then local New_Pos = self.sel_start + (self.insrc_mx/self.X_scale )/srate
        --reaper.SetEditCurPos(New_Pos, false, false) -- no seekplay
        reaper.SetEditCurPos(New_Pos, false, true)    -- seekplay
@@ -1042,9 +1041,9 @@ end
 ---  Wave - Get Mouse  -----------------------------------------------------------------------------
 ----------------------------------------------------------------------------------------------------
 function Wave:Get_Mouse()
-    --------------------
+    -----------------------------
     self.insrc_mx = self.Pos + (gfx.mouse_x-self.x)/(self.Zoom*Z_w) -- its current mouse position in source!
-    -------------------- 
+    ----------------------------- 
     --- Wave get-set Cursors ----
     self:Get_Cursor()
     self:Set_Cursor()   
@@ -1073,8 +1072,8 @@ function Wave:Get_Mouse()
       Wave:Redraw() -- redraw after move
     end
     -----------------------------------------
-    --- Wave Zoom(horizontal) ---------------
-    if self:mouseIN() and  Shift and gfx.mouse_wheel~=0 and not Ctrl then 
+    --- Wave Zoom(Vertical) -----------------
+    if self:mouseIN() and Shift and gfx.mouse_wheel~=0 and not Ctrl then 
      M_Wheel = gfx.mouse_wheel; gfx.mouse_wheel = 0
      -------------------
      if     M_Wheel>0 then self.vertZoom = math.min(self.vertZoom*1.2, self.max_vertZoom)   
