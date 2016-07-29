@@ -305,7 +305,7 @@ function Frame:draw()
    self:draw_frame()
 end
 ----------------------------------------------------------------------------------------------------
----  Create Objects(Wave,Filter,Gate) --------------------------------------------------------------
+---  Create Objects(Wave,Gate) ---------------------------------------------------------------------
 ----------------------------------------------------------------------------------------
 ----------------------------------------------------------------------------------------
 local Wave = Element:new(10,10,1024,350)
@@ -380,7 +380,7 @@ Fltr_Gain.onUp = Fltr_Sldrs_onUp
 ------------------------------------------------------------------------------------
 --- Gate Sliders -------------------------------------------------------------------
 ------------------------------------------------------------------------------------
--- ВСЕ Слайдеры нужно переименовать и расположить по-нормальному, путаница сейчас дикая получилась!!!
+-- Слайдеры нужно переименовать и расположить по-нормальному, путаница получилась!!!
 
 local Gate_Thresh = H_Slider:new(250,380,290,20, 0.3,0.5,0.7,0.3, "Threshold","Arial",15, 1 )
   function Gate_Thresh:draw_val()
@@ -395,8 +395,10 @@ local Gate_Thresh = H_Slider:new(250,380,290,20, 0.3,0.5,0.7,0.3, "Threshold","A
   ---------- 
   function Gate_Thresh:draw_val_line()
     if Wave.State then gfx.set(0.8,0.3,0,1)
-      local val_line1 = Wave.y + Wave.h/2 - (10^(self.form_val/20))*Wave.Y_scale
-      local val_line2 = Wave.y + Wave.h/2 + (10^(self.form_val/20))*Wave.Y_scale
+      local val = (10^(self.form_val/20)) * Wave.Y_scale * Wave.vertZoom * Z_h -- value in gfx
+      if val>Wave.h/2 then return end            -- don't draw lines if value out of range
+      local val_line1 = Wave.y + Wave.h/2 - val  -- line1 y coord
+      local val_line2 = Wave.y + Wave.h/2 + val  -- line2 y coord
       gfx.line(Wave.x, val_line1, Wave.x+Wave.w-1, val_line1 )
       gfx.line(Wave.x, val_line2, Wave.x+Wave.w-1, val_line2 )
     end
@@ -463,7 +465,7 @@ local Detect = Button:new(20,380,180,25, 0.4,0.12,0.12,0.3, "Get Selection",    
      --reaper.ShowConsoleMsg("Full Process time = " .. reaper.time_precise()-start_time .. '\n')--time test 
   end
 ----------------------------------- 
-local Create_MIDI = Button:new(590,380,200,25, 0.4,0.12,0.12,0.3, "Create_MIDI",    "Arial",15 )
+local Create_MIDI = Button:new(590,380,200,25, 0.4,0.12,0.12,0.3, "Create MIDI",    "Arial",15 )
   Create_MIDI.onClick = 
   function()
      if Wave.State then Wave:Create_MIDI() end 
@@ -825,13 +827,16 @@ function Wave:Set_Coord()
     self.max_Zoom = 50          -- maximum zoom level(need optim value)
     self.Zoom = self.Zoom or 1  -- init Zoom 
     self.Pos  = self.Pos  or 0  -- init src position
+    ---------
+    self.max_vertZoom = 6       -- maximum vertical zoom level(need optim value)
+    self.vertZoom = self.vertZoom or 1  -- init vertical Zoom 
     ------------------
     self:Get_Selection_SL()
     ------------------
     self.sel_len = math.min(self.sel_len,47)  -- limit lenght(deliberate restriction) 
     self.Samples    = math.floor(self.sel_len*srate)      -- Lenght to samples
     self.Blocks     = math.ceil(self.Samples/block_size)  -- Lenght to sampleblocks
-    -- pix_dens - Нужно выбрать оптимум!!!
+    -- pix_dens - Здесь нужно выбрать оптимум или оптимальную зависимость от sel_len!!!
     self.pix_dens = 2^DrawMode.norm_val                 -- 2-учесть все семплы для прорисовки(max кач-во),4-через один и тд.
     self.X, self.Y  = x, h/2                            -- waveform position(X,Y axis)
     self.X_scale    = w/self.Samples                    -- X_scale = w/lenght in samples
@@ -867,8 +872,8 @@ end
 function Wave:draw_waveform(mode, r,g,b,a)
     local Peak_TB, Ysc
     local Y = self.Y
-    if mode==1 then Peak_TB = self.in_peaks;  Ysc = self.Y_scale   
-               else Peak_TB = self.out_peaks; Ysc = self.Y_scaleFltr    
+    if mode==1 then Peak_TB = self.in_peaks;  Ysc = self.Y_scale * self.vertZoom  
+               else Peak_TB = self.out_peaks; Ysc = self.Y_scaleFltr * self.vertZoom    
     end 
     ----------------------------
     ----------------------------
@@ -1037,14 +1042,15 @@ end
 ---  Wave - Get Mouse  -----------------------------------------------------------------------------
 ----------------------------------------------------------------------------------------------------
 function Wave:Get_Mouse()
-   --------------------
-   self.insrc_mx = self.Pos + (gfx.mouse_x-self.x)/(self.Zoom*Z_w) -- its current mouse position in source!
-   -------------------- 
-   --- Wave get-set Cursors ----
-   self:Get_Cursor()
-   self:Set_Cursor()   
-   --- Wave Zoom ---------------
-   if self:mouseIN() and gfx.mouse_wheel~=0 and not(Ctrl or Shift) then 
+    --------------------
+    self.insrc_mx = self.Pos + (gfx.mouse_x-self.x)/(self.Zoom*Z_w) -- its current mouse position in source!
+    -------------------- 
+    --- Wave get-set Cursors ----
+    self:Get_Cursor()
+    self:Set_Cursor()   
+    -----------------------------------------
+    --- Wave Zoom(horizontal) ---------------
+    if self:mouseIN() and gfx.mouse_wheel~=0 and not(Ctrl or Shift) then 
       M_Wheel = gfx.mouse_wheel; gfx.mouse_wheel = 0
       -------------------
       if     M_Wheel>0 then self.Zoom = math.min(self.Zoom*1.2, self.max_Zoom)   
@@ -1056,15 +1062,28 @@ function Wave:Get_Mouse()
       self.Pos = math.min(self.Pos, (self.w - self.w/self.Zoom)/Z_w )
       -------------------
       Wave:Redraw() -- redraw after zoom
-   end
-   --- Wave Move --------------
-   if self:mouseM_Down() then 
+    end
+    -----------------------------------------
+    --- Wave Move ---------------------------
+    if self:mouseM_Down() then 
       self.Pos = self.Pos + (last_x - gfx.mouse_x)/(self.Zoom*Z_w)
       self.Pos = math.max(self.Pos, 0)
       self.Pos = math.min(self.Pos, (self.w - self.w/self.Zoom)/Z_w )
       --------------------
       Wave:Redraw() -- redraw after move
-   end
+    end
+    -----------------------------------------
+    --- Wave Zoom(horizontal) ---------------
+    if self:mouseIN() and  Shift and gfx.mouse_wheel~=0 and not Ctrl then 
+     M_Wheel = gfx.mouse_wheel; gfx.mouse_wheel = 0
+     -------------------
+     if     M_Wheel>0 then self.vertZoom = math.min(self.vertZoom*1.2, self.max_vertZoom)   
+     elseif M_Wheel<0 then self.vertZoom = math.max(self.vertZoom*0.8, 1)
+     end                 
+     -------------------
+     Wave:Redraw() -- redraw after zoom
+    end
+    
 end
 
 --------------------------------------------------------------------------------
@@ -1101,9 +1120,10 @@ function Wave:show_help()
   Ctrl + drag - fine tune.
   
   On waveform:
-  Mouswheel - zoom, 
-  Middle drag - move waveform,
-  Left click - set edit cursor.
+  Mouswheel - Horizontal Zoom,
+  Shift+Mouswheel - Vertical Zoom, 
+  Middle drag - Move Waveform,
+  Left click - set Edit Cursor.
   Space - Play. 
   ]]) 
 end
