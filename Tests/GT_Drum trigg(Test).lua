@@ -337,7 +337,7 @@ local HP_Freq = H_Slider:new(20,410,180,18, 0.3,0.5,0.7,0.3, "HP","Arial",15, 0.
     gfx.x = x+w-val_w-5
     gfx.drawstr(val)--draw Slider Value
   end
--------------
+----------------
 local LP_Freq = H_Slider:new(20,430,180,18, 0.3,0.5,0.7,0.3, "LP","Arial",15, 1 )
   function LP_Freq:draw_val()
     local sx = 16+(self.norm_val*100)*1.20103                   
@@ -351,7 +351,7 @@ local LP_Freq = H_Slider:new(20,430,180,18, 0.3,0.5,0.7,0.3, "LP","Arial",15, 1 
   end
   
 ----------------
-local Fltr_Gain = H_Slider:new(20,450,180,20,  0.3,0.5,0.5,0.3, "Filter Gain","Arial",15, 0 )
+local Fltr_Gain = H_Slider:new(20,450,180,18,  0.3,0.5,0.5,0.3, "Filter Gain","Arial",15, 0 )
   function Fltr_Gain:draw_val()
     self.form_val = self.norm_val*24  -- form value
     local x,y,w,h  = self.x,self.y,self.w,self.h
@@ -364,25 +364,35 @@ local Fltr_Gain = H_Slider:new(20,450,180,20,  0.3,0.5,0.5,0.3, "Filter Gain","A
   ----------------------------------------
   -- onUp function for Filter sliders ----
   ----------------------------------------
-  function Fltr_Sldrs_onUp() 
-     if Wave.AA then
-         Wave:Processing()
-         if Wave.State then
-            Gate_Gl:Apply_toFiltered()
-         end
+  function Fltr_Sldrs_onUp()
+     local start_time = reaper.time_precise()
+     ---------- 
+     if Wave.AA then Wave:Processing()
+        if Wave.State then
+           Wave:Redraw() 
+           Gate_Gl:Apply_toFiltered()
+        end
      end
+     ---------- 
+     --reaper.ShowConsoleMsg("Full Process - Original = " .. reaper.time_precise()-start_time .. '\n')--time test
   end
 ----------------
 HP_Freq.onUp   = Fltr_Sldrs_onUp
 LP_Freq.onUp   = Fltr_Sldrs_onUp
-Fltr_Gain.onUp = Fltr_Sldrs_onUp
+----------------
+----------------
+Fltr_Gain.onUp =
+  function() 
+     if Wave.State then 
+        Wave:Redraw()
+        Gate_Gl:Apply_toFiltered() 
+     end 
+  end
 
 ------------------------------------------------------------------------------------
 --- Gate Sliders -------------------------------------------------------------------
 ------------------------------------------------------------------------------------
--- Слайдеры нужно переименовать и расположить по-нормальному, путаница получилась!!!
-
-local Gate_Thresh = H_Slider:new(250,380,290,20, 0.3,0.5,0.7,0.3, "Threshold","Arial",15, 1 )
+local Gate_Thresh = H_Slider:new(250,380,290,18, 0.3,0.5,0.7,0.3, "Threshold","Arial",15, 1 )
   function Gate_Thresh:draw_val()
     self.form_val = (self.norm_val-1)*57-3
     local x,y,w,h  = self.x,self.y,self.w,self.h
@@ -404,7 +414,7 @@ local Gate_Thresh = H_Slider:new(250,380,290,20, 0.3,0.5,0.7,0.3, "Threshold","A
     end
   end
 ----------------
-local Gate_Sensetive = H_Slider:new(250,405,290,18, 0.3,0.5,0.7,0.3, "Sensetive","Arial",15, 0.2 )
+local Gate_Sensetive = H_Slider:new(250,400,290,18, 0.3,0.5,0.7,0.3, "Sensetive","Arial",15, 0.2 )
   function Gate_Sensetive:draw_val()
     self.form_val = 2+(self.norm_val)*15
     local x,y,w,h  = self.x,self.y,self.w,self.h
@@ -413,8 +423,18 @@ local Gate_Sensetive = H_Slider:new(250,405,290,18, 0.3,0.5,0.7,0.3, "Sensetive"
     gfx.x = x+w-val_w-5
     gfx.drawstr(val)--draw Slider Value
   end
----------------- ! It detect velo time !
-local Gate_DetVelo = H_Slider:new(650,440,140,18, 0.3,0.5,0.5,0.3, "Detect Velo","Arial",15, 0.1 ) -- 250,405,220,18
+----------------
+local Gate_Retrig = H_Slider:new(250,420,290,18, 0.3,0.5,0.5,0.3, "Retrig","Arial",15, 0.15 )
+  function Gate_Retrig:draw_val()
+    self.form_val  = 20+ self.norm_val * 80                 -- form_val
+    local x,y,w,h  = self.x,self.y,self.w,self.h
+    local val = string.format("%.1f", self.form_val).." ms"
+    local val_w, val_h = gfx.measurestr(val)
+    gfx.x = x+w-val_w-5
+    gfx.drawstr(val)--draw Slider Value
+  end
+---------------- Detect velo time(slider in MIDI section)
+local Gate_DetVelo = H_Slider:new(650,430,140,18, 0.3,0.5,0.5,0.3, "Detect Velo","Arial",15, 0.1 ) -- 250,405,220,18
   function Gate_DetVelo:draw_val()
     self.form_val  = 3+ self.norm_val * 7                   -- form_val
     local x,y,w,h  = self.x,self.y,self.w,self.h
@@ -424,16 +444,6 @@ local Gate_DetVelo = H_Slider:new(650,440,140,18, 0.3,0.5,0.5,0.3, "Detect Velo"
     gfx.drawstr(val)--draw Slider Value
   end
 
-----------------
-local Gate_Retrig = H_Slider:new(250,425,290,18, 0.3,0.5,0.5,0.3, "Retrig","Arial",15, 0.15 )
-  function Gate_Retrig:draw_val()
-    self.form_val  = 20+ self.norm_val * 80                 -- form_val
-    local x,y,w,h  = self.x,self.y,self.w,self.h
-    local val = string.format("%.1f", self.form_val).." ms"
-    local val_w, val_h = gfx.measurestr(val)
-    gfx.x = x+w-val_w-5
-    gfx.drawstr(val)--draw Slider Value
-  end
  
   ----------------------------------------
   -- onUp function for Gate sliders ------
@@ -442,10 +452,10 @@ local Gate_Retrig = H_Slider:new(250,425,290,18, 0.3,0.5,0.5,0.3, "Retrig","Aria
      if Wave.State then Gate_Gl:Apply_toFiltered() end 
   end
 ----------------
-Gate_Thresh.onUp   = Gate_Sldrs_onUp
-Gate_Sensetive.onUp  = Gate_Sldrs_onUp
-Gate_DetVelo.onUp  = Gate_Sldrs_onUp
-Gate_Retrig.onUp   = Gate_Sldrs_onUp
+Gate_Thresh.onUp    = Gate_Sldrs_onUp
+Gate_Sensetive.onUp = Gate_Sldrs_onUp
+Gate_Retrig.onUp    = Gate_Sldrs_onUp
+Gate_DetVelo.onUp   = Gate_Sldrs_onUp
 
 -----------------------------------
 --- Slider_TB ---------------------
@@ -458,11 +468,17 @@ local Slider_TB = {HP_Freq,LP_Freq,Fltr_Gain, Gate_Thresh, Gate_Sensetive, Gate_
 local Detect = Button:new(20,380,180,25, 0.4,0.12,0.12,0.3, "Get Selection",    "Arial",15 )
   Detect.onClick = 
   function()
-     local start_time = reaper.time_precise() 
+     local start_time = reaper.time_precise()
+     ----------
+     Wave.State = false -- reset Wave.State
      if Wave:Create_Track_Accessor() then Wave:Processing()
-        if Wave.State then Gate_Gl:Apply_toFiltered() end
-     end 
-     --reaper.ShowConsoleMsg("Full Process time = " .. reaper.time_precise()-start_time .. '\n')--time test 
+        if Wave.State then
+           Wave:Redraw()  
+           Gate_Gl:Apply_toFiltered() 
+        end
+     end
+     ---------- 
+     reaper.ShowConsoleMsg("Full Process time = " .. reaper.time_precise()-start_time .. '\n')--time test 
   end
 ----------------------------------- 
 local Create_MIDI = Button:new(590,380,200,25, 0.4,0.12,0.12,0.3, "Create MIDI",    "Arial",15 )
@@ -478,29 +494,39 @@ local Button_TB = {Detect,Create_MIDI}
 ------------------------------------------------------------------------------------
 --- CheckBoxes ---------------------------------------------------------------------
 ------------------------------------------------------------------------------------
-    -- x,y,w,h, r,g,b,a, lbl,fnt,fnt_sz, norm_val = check, norm_val2 = checkbox table --
---------------
+  -- x,y,w,h, r,g,b,a, lbl,fnt,fnt_sz, norm_val = check, norm_val2 = checkbox table --
+----------------------------------------------------------------------------------------
 local CreateMIDIMode = CheckBox:new(650,410,140,18,   0.3,0.5,0.3,0.3, "","Arial",15,  1,
                               {"Create New Item","Use Selected Item"} )
---------------
+-----------------
 local OutNote  = CheckBox:new(590,410,50,18,  0.3,0.5,0.3,0.3, "","Arial",15,  1,
                               {36,37,38,39,40,41,42,43,44,45,46,47} )
 -----------------
 -----------------
-local VeloMode = CheckBox:new(590,440,50,18,  0.3,0.5,0.5,0.3, "","Arial",15,  1,
+local VeloMode = CheckBox:new(590,430,50,18,  0.3,0.5,0.5,0.3, "","Arial",15,  1,
                               {"RMS","Peak"} )
 
-VeloMode.onClick = Gate_Sldrs_onUp
---------------
---------------
+VeloMode.onClick = 
+  function()
+     if Wave.State and CreateMIDIMode.norm_val == 2 then Wave:Create_MIDI() end
+  end
+-----------------------------------
+-----------------------------------
 local DrawMode = CheckBox:new(950,380,70,18,   0.3,0.5,0.5,0.3, "Draw: ","Arial",15,  3,
                               { "Very Slow", "Slow", "Medium", "Fast" } )
 
 DrawMode.onClick = Fltr_Sldrs_onUp
+--------------
+local ViewMode = CheckBox:new(950,400,70,18,   0.3,0.5,0.5,0.3, "View: ","Arial",15,  1,
+                              { "All", "Original", "Filtered" } )
+ViewMode.onClick = 
+  function() 
+     if Wave.State then Wave:Redraw() end 
+  end
 -----------------------------------
 --- CheckBox_TB -------------------
 -----------------------------------
-local CheckBox_TB = {CreateMIDIMode,OutNote,VeloMode, DrawMode}
+local CheckBox_TB = {CreateMIDIMode,OutNote,VeloMode, DrawMode, ViewMode}
 
 
 
@@ -529,7 +555,6 @@ function Gate_Gl:Apply_toFiltered()
       ------------------------------------- 
       -- Gate state tables ----------------
       self.State_Points = {}               -- State_Points table 
-      self.State_Lines  = {}               -- State_Lines  table
       -------------------------------------
       -------------------------------------------------
       -- GetSet parameters ----------------------------
@@ -547,10 +572,9 @@ function Gate_Gl:Apply_toFiltered()
       -----------------------------------
       -- Init counters etc --------------
       ----------------------------------- 
-      local retrig_smpls = math.floor(Gate_Retrig.form_val/1000*srate)  -- Retrig slider to samples
-      local retrig       = retrig_smpls+1                               -- Retrig counter start value!
-      local det_velo_sec    = Gate_DetVelo.form_val/1000        -- DetVelo slider to sec
-      local det_velo_smpls  = math.floor(det_velo_sec*srate)    -- DetVelo slider to samples 
+      local retrig_smpls   = math.floor(Gate_Retrig.form_val/1000*srate)  -- Retrig slider to samples
+      local retrig         = retrig_smpls+1                               -- Retrig counter start value!
+      local det_velo_smpls = math.floor(Gate_DetVelo.form_val/1000*srate) -- DetVelo slider to samples 
       -----------------------------------
       local rms_sum,   maxRMS  = 0, 0       -- init rms_sum,   maxRMS
       local peak_smpl, maxPeak = 0, 0       -- init peak_smpl, maxPeak
@@ -558,7 +582,6 @@ function Gate_Gl:Apply_toFiltered()
       local smpl_cnt  = 0                   -- Gate sample(for get velo) counter
       local st_cnt    = 1                   -- Gate State counter for State tables
       -------------------
-      local sel_start = Wave.sel_start - det_velo_sec -- sel_start(and compensation - det_velo_sec) for time points
       -------------------
       local envOut1 = Wave.out_buf[1]        -- Peak envelope1 follower start value
       local envOut2 = envOut1                -- Peak envelope2 follower start value
@@ -609,25 +632,14 @@ function Gate_Gl:Apply_toFiltered()
                       GetSmpls = false -- reset GetSmpls state !!!
                       --------------------
                       local RMS  = sqrt(rms_sum/det_velo_smpls)  -- calculate RMS
-                      --- open point -----
-                      self.State_Points[st_cnt] = true                             -- State - нужно в другом гейте, или нах?? 
-                      self.State_Points[st_cnt+1] = sel_start + ((i-1)/2)/srate    -- Time point(sec)
-                      if VeloMode.norm_val==1 then
-                             self.State_Points[st_cnt+2] = RMS                     -- RMS mode
-                        else self.State_Points[st_cnt+2] = peak_smpl               -- Peak mode
-                      end
-                      --- open line ------
-                      self.State_Lines[st_cnt] = true                              -- State - нужно в другом гейте, или нах?? 
-                      self.State_Lines[st_cnt+1] = ((i-1)/2 - det_velo_smpls) * Wave.X_scale  -- Time point in gfx
-                      if VeloMode.norm_val ==1 then
-                             self.State_Lines[st_cnt+2] = RMS                      -- RMS mode
-                        else self.State_Lines[st_cnt+2] = peak_smpl                -- Peak mode
-                      end
+                      --- Trigg point -----
+                      self.State_Points[st_cnt]   = (i-1)/2 - det_velo_smpls  -- Time point(in Samples!) 
+                      self.State_Points[st_cnt+1] = {RMS, peak_smpl}        -- RMS, Peak values
                       --------
                       maxRMS  = max(maxRMS, RMS)         -- save maxRMS for scaling
                       maxPeak = max(maxPeak, peak_smpl)  -- save maxPeak for scaling             
                       --------
-                      st_cnt = st_cnt+3
+                      st_cnt = st_cnt+2
                       --------------------
               end
            end       
@@ -643,7 +655,9 @@ function Gate_Gl:Apply_toFiltered()
     -----------------------------
     -----------------------------
     if CreateMIDIMode.norm_val == 2 then Wave:Create_MIDI() end -- Auto-create MIDI, when mode == 2(use sel item)
-
+    -----------------------------
+  --Garb = collectgarbage ("count")/1024 -- garbage test in MB
+  collectgarbage("collect")            -- collectgarbage 
 end
 
 ----------------------------------------------------------------------
@@ -651,29 +665,89 @@ end
 ----------------------------------------------------------------------
 
 function Gate_Gl:draw_Lines()
-  if not self.State_Lines then return end -- return if no lines
-    -- Velocity scale --
+  if not self.State_Points or #self.State_Points==0 then return end -- return if no lines
+    -- Velocity scale -----
+    local mode = VeloMode.norm_val
     local scale
-    if VeloMode.norm_val == 1 then 
-            scale = 1/Gate_Gl.maxRMS    -- velocity scale RMS
-       else scale = 1/Gate_Gl.maxPeak   -- velocity scale Peak
+    if mode == 1 then scale = 1/Gate_Gl.maxRMS    -- velocity scale by RMS
+                 else scale = 1/Gate_Gl.maxPeak   -- velocity scale by Peaks
     end
-    -- line color ------
+    -- Pos, X, Y scale ---------
+    local Pos_smpls = Wave.Pos/Wave.X_scale     -- Стартовая позиция отрисовки в семплах!
+    local Xsc = Wave.X_scale * Wave.Zoom * Z_w  -- x scale(regard zoom) for trigg lines
+    local Yop = Wave.y + Wave.h  -- y start wave coord for velo points
+    local Ysc = Wave.h * scale   -- y scale for velo points 
+    
+    -- lines, points color -----
     gfx.set(1, 1, 0) -- gate line, point color
     ----------------------------
-    for i=1, #self.State_Lines, 3 do
+    for i=1, #self.State_Points, 2 do
        -- draw line, velo ------ 
-       local line_x   = Wave.x + (self.State_Lines[i+1] - Wave.Pos) * Wave.Zoom*Z_w    -- line x coord
-       local velo_y   = (Wave.y + Wave.h) -  Wave.h*self.State_Lines[i+2] *scale       -- velo y coord    
+       local line_x   = Wave.x + (self.State_Points[i] - Pos_smpls) * Xsc  -- line x coord
+       local velo_y   = Yop -  self.State_Points[i+1][mode] * Ysc          -- velo y coord    
+       -------------------------
+       -------------------------
+       if line_x>=Wave.x and line_x<=Wave.x+Wave.w then
           ----------------------
           gfx.a = 0.6     -- gate line a
-          gfx.line(line_x, Wave.y, line_x, Wave.y + Wave.h-1 )
+          gfx.line(line_x, Wave.y, line_x, Yop-1)
           ----------------------
           gfx.a = 0.8     -- velo point a
           gfx.circle(line_x, velo_y, 2,1,1) -- Velocity point
+       end
+       -------------------------
+       if not self.captd and abs(line_x-gfx.mouse_x)<10 and ((Shift and Wave:mouseDown()) or 
+          Wave:mouseR_Down()) then self.captd = i
+       end
+       -------------------------
     end
+  
+  ------------------------
+  ------------------------  
+      ------------------------------------------------------
+      -- Operations witch captured etc ---------------------
+      ------------------------------------------------------
+      if self.captd and Shift and Wave:mouseDown() then
+        -- Move -----------------------------------------
+        local line_x = Wave.x + (self.State_Points[self.captd] - Pos_smpls) * Xsc  -- line x coord
+        local curs_y = min(max(gfx.mouse_y, Wave.y), Yop)
+             gfx.set(1, 1, 1, 1) -- cursor color 
+             gfx.line(line_x-12, curs_y, line_x+12, curs_y)
+             gfx.circle(line_x, curs_y, 3 , 0, 1)
+             ---------
+             self.State_Points[self.captd] = self.State_Points[self.captd] + (gfx.mouse_x-last_x) / Xsc
+        -- Delete ---------------------------------------
+        elseif self.captd and Wave:mouseR_Down() then gfx.x, gfx.y  = gfx.mouse_x, gfx.mouse_y
+          if gfx.showmenu("Delete")==1 then
+             table.remove(self.State_Points,self.captd) -- Del self.captd - Элементы смещаются влево!
+             table.remove(self.State_Points,self.captd) -- Поэтому, опять тот же индекс(а не self.captd+1)
+          end
+        -- Insert  --------------------------------------
+        elseif Wave:mouseR_Down() then gfx.x, gfx.y  = gfx.mouse_x, gfx.mouse_y
+          if gfx.showmenu("Insert")==1 then
+             local line_pos = Pos_smpls + gfx.mouse_x/Xsc            -- Time point(in Samples!) from mouse x pos
+             local veloRMS  = (Yop - gfx.y)/(Wave.h/Gate_Gl.maxRMS)  -- veloRMS from mouse y pos
+             local veloPeak = (Yop - gfx.y)/(Wave.h/Gate_Gl.maxPeak) -- veloPeak from mouse y pos
+             table.insert(self.State_Points, line_pos)            -- В конец таблицы
+             table.insert(self.State_Points, {veloRMS, veloPeak}) -- В конец таблицы
+             ----------
+             self.captd = #self.State_Points
+          end 
+      end
+      
+      ------------------------------------------------------
+      -- Update captured state if mouse released -----------
+      ------------------------------------------------------
+      if self.captd and Wave:mouseUp() then self.captd = false  
+         if CreateMIDIMode.norm_val == 2 then Wave:Create_MIDI() end -- Auto-create MIDI, when mode == 2(use sel item)
+      end
 end
 
+------------------------------------------------------
+-- Gate -  manual_Correction -------------------------
+--[[--------------------------------------------------
+function Gate_Gl:manual_Correction()
+end--]]
 
 ------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------
@@ -700,7 +774,7 @@ function Wave:GetSet_MIDITake()
       if item then take = reaper.GetActiveTake(item) end
          if take and reaper.TakeIsMIDI(take) then
             local ret, notecnt, ccevtcnt, textsyxevtcnt = reaper.MIDI_CountEvts(take)
-            local findpitch = tonumber(OutNote.norm_val2[OutNote.norm_val]) -- переделывать эту чушь..
+            local findpitch = OutNote.norm_val2[OutNote.norm_val]
             local note = 0
              for i=1, notecnt do
                  local ret, sel, muted, startppq, endppq, chan, pitch, vel = reaper.MIDI_GetNote(take, note)
@@ -726,22 +800,21 @@ function Wave:Create_MIDI()
     local item, take = Wave:GetSet_MIDITake()
     if not take then return end 
     -- Note parameters ---------
-    --local pitch = tonumber( string.match(OutNote.norm_val2[OutNote.norm_val], "%((%d+)") ) -- переделывать эту чушь..
     local pitch = OutNote.norm_val2[OutNote.norm_val]
     local len = 60
     local sel, mute, chan = 1, 0, 0
     local startppqpos, endppqpos, vel
     -- Velocity scale --
+    local mode = VeloMode.norm_val
     local scale
-    if VeloMode.norm_val == 1 then 
-           scale = 1/Gate_Gl.maxRMS    -- velocity scale RMS
-      else scale = 1/Gate_Gl.maxPeak   -- velocity scale Peak
+    if mode == 1 then scale = (1/Gate_Gl.maxRMS)*127   -- velocity scale by RMS
+                 else scale = (1/Gate_Gl.maxPeak)*127  -- velocity scale by Peaks
     end
     -----------
-    for i=1, #Gate_Gl.State_Points, 3 do
-        startppqpos = reaper.MIDI_GetPPQPosFromProjTime(take, Gate_Gl.State_Points[i+1] )
+    for i=1, #Gate_Gl.State_Points, 2 do
+        startppqpos = reaper.MIDI_GetPPQPosFromProjTime(take, self.sel_start + Gate_Gl.State_Points[i]/srate )
         endppqpos   = startppqpos + len
-        vel = math.floor(Gate_Gl.State_Points[i+2] *scale*127)
+        vel = math.floor(Gate_Gl.State_Points[i+1][mode] *scale)
         reaper.MIDI_InsertNote(take, sel, mute, startppqpos, endppqpos, chan, pitch, vel, true)
     end
     -----------
@@ -758,13 +831,19 @@ end
 function Wave:Create_Track_Accessor() 
  self.track = reaper.GetSelectedTrack(0,0)
     if self.track then self.AA = reaper.CreateTrackAudioAccessor(self.track) 
-         self.AA_Hash = reaper.GetAudioAccessorHash(self.AA, "")
+         self.AA_Hash  = reaper.GetAudioAccessorHash(self.AA, "")
          self.AA_start = reaper.GetAudioAccessorStartTime(self.AA)
          self.AA_end   = reaper.GetAudioAccessorEndTime(self.AA)
          self.buffer   = reaper.new_array(block_size*2)-- L,R main block-buffer
          self.buffer.clear()
          return true
     end
+end
+--------
+function Wave:Validate_Accessor()
+ if self.AA then 
+    if not reaper.AudioAccessorValidateState(self.AA) then return true end 
+ end
 end
 --------
 function Wave:Destroy_Track_Accessor()
@@ -816,22 +895,19 @@ end
 -- Wave:Set_Coord --------------------------------------------------------------
 --------------------------------------------------------------------------------
 function Wave:Set_Coord()
-  --gfx buffer always used def coord! --
+  -- gfx buffer always used default Wave coordinates! --
   local x,y,w,h = self.def_xywh[1],self.def_xywh[2],self.def_xywh[3],self.def_xywh[4] 
     ---------------------------------
-    -- init peak tables -------------
-    self.in_peaks  = {}    
-    self.out_peaks = {}
-    ------------------
+    -- init Horizontal --------------
     self.max_Zoom = 50          -- maximum zoom level(need optim value)
     self.Zoom = self.Zoom or 1  -- init Zoom 
     self.Pos  = self.Pos  or 0  -- init src position
-    ---------
+    -- init Vertical ----------------
     self.max_vertZoom = 6       -- maximum vertical zoom level(need optim value)
     self.vertZoom = self.vertZoom or 1  -- init vertical Zoom 
-    ------------------
-    self:Get_Selection_SL()
-    ------------------
+    -- Get Selection ----------------
+    self:Get_Selection_SL()     -- Get sel track, sel start, sel lenght
+    -- Calculate some values --------
     self.sel_len = math.min(self.sel_len,47)  -- limit lenght(deliberate restriction) 
     self.Samples    = math.floor(self.sel_len*srate)      -- Lenght to samples
     self.Blocks     = math.ceil(self.Samples/block_size)  -- Lenght to sampleblocks
@@ -840,9 +916,7 @@ function Wave:Set_Coord()
     self.X, self.Y  = x, h/2                            -- waveform position(X,Y axis)
     self.X_scale    = w/self.Samples                    -- X_scale = w/lenght in samples
     self.Y_scale    = h/2                               -- Y_scale for waveform drawing
-    -- Its not real Gain - only visual :) !!! -- но это тоже обязательно учитывать в дальнейшем, экономит время - такой себе фокус...
-    self.Y_scaleFltr   = (h/2)/block_size *10^(Fltr_Gain.form_val/20)   -- from Fltr_Gain Sldr!-- Y_scale for filtered waveform drawing
-
+ 
 end
 
 --------------------------------------------------------------------------------------------
@@ -850,17 +924,21 @@ end
 --------------------------------------------------------------------------------------------
 
 --------------------------------------------------------------------------------
---- Draw Original,Filtered(New Var) --------------------------------------------
+--- Draw Original,Filtered -----------------------------------------------------
 --------------------------------------------------------------------------------
 function Wave:Redraw() -- 
-  local x,y,w,h = self.def_xywh[1],self.def_xywh[2],self.def_xywh[3],self.def_xywh[4] 
-  gfx.dest = 1             -- set dest gfx buffer1
-  gfx.a    = 1             -- for buf    
-    gfx.setimgdim(1,-1,-1) -- clear buf1(wave)
-    gfx.setimgdim(1,w,h)   -- set w,h
+    local x,y,w,h = self.def_xywh[1],self.def_xywh[2],self.def_xywh[3],self.def_xywh[4] 
     ---------------
-    self:draw_waveform(1,  0.3,0.4,0.7,1) -- Draw Original(mode=1)
-    self:draw_waveform(2,  0.7,0.1,0.3,1) -- Draw Filtered(mode=2)
+    gfx.dest = 1             -- set dest gfx buffer1
+    gfx.a    = 1             -- a - for buf    
+    gfx.setimgdim(1,-1,-1) -- clear buf1(Wave)
+    gfx.setimgdim(1,w,h)   -- set gfx buffer w,h
+    ---------------
+      if ViewMode.norm_val == 1 then self:draw_waveform(1,  0.3,0.4,0.7,1) -- Draw Original(1, r,g,b,a)
+                                     self:draw_waveform(2,  0.7,0.1,0.3,1) -- Draw Filtered(2, r,g,b,a)
+        elseif ViewMode.norm_val == 2 then self:draw_waveform(1,  0.3,0.4,0.7,1) -- Only original
+        elseif ViewMode.norm_val == 3 then self:draw_waveform(2,  0.7,0.1,0.3,1) -- Only filtered
+      end
     ---------------
     gfx.dest = -1          -- set main gfx dest buffer
     ---------------
@@ -871,9 +949,13 @@ end
 function Wave:draw_waveform(mode, r,g,b,a)
     local Peak_TB, Ysc
     local Y = self.Y
-    if mode==1 then Peak_TB = self.in_peaks;  Ysc = self.Y_scale * self.vertZoom  
-               else Peak_TB = self.out_peaks; Ysc = self.Y_scaleFltr * self.vertZoom    
-    end 
+    ----------------------------
+    if mode==1 then Peak_TB = self.in_peaks;  Ysc = self.Y_scale * self.vertZoom end  
+    if mode==2 then Peak_TB = self.out_peaks;
+       -- Its not real Gain - only visual - но это обязательно учитывать в дальнейшем, экономит время - такой себе фокус...
+       local fltr_gain = 10^(Fltr_Gain.form_val/20)               -- from Fltr_Gain Sldr!
+       Ysc = self.Y_scale/block_size * fltr_gain * self.vertZoom  -- Y_scale for filtered waveform drawing 
+    end   
     ----------------------------
     ----------------------------
     ----------------------------
@@ -887,7 +969,7 @@ function Wave:draw_waveform(mode, r,g,b,a)
        local next = i*Zfact + Ppos
        local min_peak, max_peak, peak = 0, 0, 0 
           -----
-          while p<= next do 
+          while p< next do 
               peak = Peak_TB[p][1]
                 min_peak = min(min_peak, peak)
                 max_peak = max(max_peak, peak)
@@ -905,7 +987,7 @@ end
 
 --------------------------------------------------------------
 --------------------------------------------------------------
-function Wave:Create_Peaks(mode)
+function Wave:Create_Peaks(mode) -- mode = 1 for oriinal, mode = 2 for filtered
     local buf
     if mode==1 then buf = self.in_buf    -- for input(original)    
                else buf = self.out_buf   -- for output(filtered)
@@ -921,7 +1003,7 @@ function Wave:Create_Peaks(mode)
     for i=1, w * self.max_Zoom do
         local next = i*smpl_inpix
         local min_smpl, max_smpl, smpl = 0, 0, 0 
-        while s<= next do 
+        while s< next do 
             smpl = buf[s]
               min_smpl = min(min_smpl, smpl)
               max_smpl = max(max_smpl, smpl)
@@ -940,19 +1022,28 @@ end
 ------------------------------------------------------------------------------------------------------------------------
 function Wave:Processing()
   local start_time = reaper.time_precise()--time test
-    -----------------------------------------------
-    self:Set_Coord() -- set main values, coordinates etc
-    -----------------------------------------------
+    -------------------------------------------------------------------------
+    -- Get Original(input) samples to in_buf >> to table >> create peaks ----
+    -------------------------------------------------------------------------
+    if not self.State then
+        self:Set_Coord() -- set main values, coordinates etc   
+        ------------------------------------------------------
+        local in_buf  = reaper.new_array(self.Samples*n_chans)         -- buffer for original(input) samples
+        in_buf.clear(0)                                                -- clear in_buf
+        reaper.GetAudioAccessorSamples(self.AA, srate,n_chans, self.sel_start,self.Samples, in_buf) -- orig samples to in_buf for drawing
+        self.in_buf  = in_buf.table()   -- to table in_buf
+        self:Create_Peaks(1)  -- Create_Peaks input(Original) wave peaks
+    end
+    
+    -------------------------------------------------------------
+    -- Filter values --------------------------------------------
+    -------------------------------------------------------------
     local crsx = block_size/8   -- one side "crossX" - use for discard some FFT artefacts(Its non-native, but in this case normally!)
     local Xblock = block_size-crsx*2                               -- active part of full block
-    self.A_Blocks  = math.ceil( self.Samples/Xblock )              -- sel_len to active sampleblocks 
-    local in_buf  = reaper.new_array(self.Samples*n_chans)         -- buffer for original(input) samples
-    local out_buf = reaper.new_array(self.A_Blocks*Xblock*n_chans) -- buffer for filtered(output) samples - rnd to blocks!
-    in_buf.clear(0)                                                -- clear in_buf
+    local A_Blocks  = math.ceil( self.Samples/Xblock )             -- sel_len to active sampleblocks 
+    local out_buf = reaper.new_array(A_Blocks*Xblock*n_chans) -- buffer for filtered(output) samples - rnd to blocks!
     out_buf.clear(0)                                               -- clear out_buf 
-    self.block_start = self.sel_start - (crsx/srate)/n_chans       -- first block start(regard crsx)
-      -------------------------------
-      -- Filter values --------------
+    local block_start = self.sel_start - (crsx/srate)/n_chans      -- first block start(regard crsx)
       -------------------------------
       -- LP = HiFreq, HP = LowFreq --
       local Low_Freq, Hi_Freq =  HP_Freq.form_val, LP_Freq.form_val
@@ -962,46 +1053,27 @@ function Wave:Processing()
       -- lowband, hiband to valid values(need even int) ------------
       lowband = math.floor(lowband/2)*2
       hiband  = math.ceil(hiband/2)*2  
-    
-    
-    -- Тут нужно переделывать !!! --------------
-    -- По идее, можно брать семплы из in_buf, и не трогать акцессор.
-    -- Это и проще, и быстрее.  ----------------
-    --------------------------------------------------------
-    -- Get Original(input samples-All!) to in_buf ----------
-    --------------------------------------------------------
-    reaper.GetAudioAccessorSamples(self.AA,srate,n_chans,self.sel_start,self.Samples, in_buf) -- orig samples to in_buf for drawing
-     
-    --------------------------------------------------------
-    -- Filtering each block and add to out_buf -------------
-    --------------------------------------------------------
-    for block=1, self.A_Blocks do reaper.GetAudioAccessorSamples(self.AA,srate,n_chans,self.block_start,block_size, self.buffer)
-        self.block_X = (block-1)* Xblock * self.X_scale     -- X-offs for draw each block
+    -------------------------------------------------------------
+    -- Filtering each block and add to out_buf ------------------
+    -------------------------------------------------------------
+    for block=1, A_Blocks do reaper.GetAudioAccessorSamples(self.AA, srate,n_chans, block_start,block_size, self.buffer)
         --------------------
         self:Filter_FFT(lowband, hiband)                    -- Filter(note: don't use out of range freq!)
         out_buf.copy(self.buffer, crsx+1, n_chans*Xblock, (block-1)* n_chans*Xblock + 1 ) -- copy block to out_buf with offset
         --------------------
-        self.block_start = self.block_start + Xblock/srate  -- next block start_time
+        block_start = block_start + Xblock/srate  -- next block start_time
     end
-    out_buf.resize(self.Samples*n_chans) -- resize out_buf to selection lenght
-    --------------------------------------------------------
+    out_buf.resize(self.Samples*n_chans) -- resize out_buf to selection lenght!
+    -------------------------------------------------------------
     
-    ---------------------------------------------------------------------------------------------------------
-    -- Дальнейшие операции быстрее(примерно на 35-45%) происходят с таблицей, проверено !!!
-    -- Поэтому лучше преводить в таблицу, это сильно ускоряет работу гейта - почти в два раза. 
-    -- А гейт используется гораздо чаще. На перевод в таблицу уходит совсем немного - И СРАЗУ ЖЕ ОКУПАЕТСЯ.
-    ---------------------------------------------------------------------------------------------------------
-    self.in_buf  = in_buf.table()   -- to table in_buf
+    -------------------------------------------------------------------------
+    -- Filtered(output) samples to to table >> create peaks -----------------
+    -------------------------------------------------------------------------
     self.out_buf = out_buf.table()  -- to table out_buf
-    --Garb = collectgarbage ("count")/1024 -- garbage test in MB 
-    ------------------------------------------------------
-    -- Create_Peaks - Original and Filtered --------------
-    ------------------------------------------------------
-    self:Create_Peaks(1)  -- input wave peaks
-    self:Create_Peaks(2)  -- output wave peaks
-    self:Redraw()
-    ------------------------------------------------------
-    self.State = true
+    self:Create_Peaks(2)  -- Create_Peaks output(Filtered) wave peaks
+    -------------------------------------------------------------------------
+    
+    self.State = true -- Change State
     -------------------------
   --reaper.ShowConsoleMsg("Filter time = " .. reaper.time_precise()-start_time .. '\n')--time test   
 end 
@@ -1050,7 +1122,7 @@ function Wave:Get_Mouse()
     -----------------------------------------
     --- Wave Zoom(horizontal) ---------------
     if self:mouseIN() and gfx.mouse_wheel~=0 and not(Ctrl or Shift) then 
-      M_Wheel = gfx.mouse_wheel; gfx.mouse_wheel = 0
+      M_Wheel = gfx.mouse_wheel
       -------------------
       if     M_Wheel>0 then self.Zoom = math.min(self.Zoom*1.2, self.max_Zoom)   
       elseif M_Wheel<0 then self.Zoom = math.max(self.Zoom*0.8, 1)
@@ -1060,7 +1132,18 @@ function Wave:Get_Mouse()
       self.Pos = math.max(self.Pos, 0)
       self.Pos = math.min(self.Pos, (self.w - self.w/self.Zoom)/Z_w )
       -------------------
-      Wave:Redraw() -- redraw after zoom
+      Wave:Redraw() -- redraw after horizontal zoom
+    end
+    -----------------------------------------
+    --- Wave Zoom(Vertical) -----------------
+    if self:mouseIN() and Shift and gfx.mouse_wheel~=0 and not Ctrl then 
+     M_Wheel = gfx.mouse_wheel
+     -------------------
+     if     M_Wheel>0 then self.vertZoom = math.min(self.vertZoom*1.2, self.max_vertZoom)   
+     elseif M_Wheel<0 then self.vertZoom = math.max(self.vertZoom*0.8, 1)
+     end                 
+     -------------------
+     Wave:Redraw() -- redraw after vertical zoom
     end
     -----------------------------------------
     --- Wave Move ---------------------------
@@ -1069,19 +1152,9 @@ function Wave:Get_Mouse()
       self.Pos = math.max(self.Pos, 0)
       self.Pos = math.min(self.Pos, (self.w - self.w/self.Zoom)/Z_w )
       --------------------
-      Wave:Redraw() -- redraw after move
+      Wave:Redraw() -- redraw after move view
     end
-    -----------------------------------------
-    --- Wave Zoom(Vertical) -----------------
-    if self:mouseIN() and Shift and gfx.mouse_wheel~=0 and not Ctrl then 
-     M_Wheel = gfx.mouse_wheel; gfx.mouse_wheel = 0
-     -------------------
-     if     M_Wheel>0 then self.vertZoom = math.min(self.vertZoom*1.2, self.max_vertZoom)   
-     elseif M_Wheel<0 then self.vertZoom = math.max(self.vertZoom*0.8, 1)
-     end                 
-     -------------------
-     Wave:Redraw() -- redraw after zoom
-    end
+    
     
 end
 
@@ -1095,13 +1168,12 @@ function Wave:from_gfxBuffer()
   gfx.line(self.x, self.y+self.h/2, self.x+self.w-1, self.y+self.h/2 )
   self:draw_frame() 
   -- Insert Wave from buf ----
-  if Wave.State then gfx.a = 1 -- gfx.a for blit
-     -- from gfx buffer 1 ----
-     local srcw, srch = Wave.def_xywh[3], Wave.def_xywh[4] -- its always def values 
-     gfx.blit(1, 1, 0, 0, 0, srcw, srch,  self.x, self.y, self.w, self.h)
-     self:Get_Mouse()     -- get mouse(for zoom,move etc)
-  else self:show_help()
-  end
+  gfx.a = 1 -- gfx.a for blit
+  -- from gfx buffer 1 -------
+  local srcw, srch = Wave.def_xywh[3], Wave.def_xywh[4] -- its always def values 
+  gfx.blit(1, 1, 0, 0, 0, srcw, srch,  self.x, self.y, self.w, self.h)
+  self:Get_Mouse()     -- get mouse(for zoom,move etc)
+  
 end  
 
 --------------------------------------------------------------------------------
@@ -1118,11 +1190,14 @@ function Wave:show_help()
   Use sliders for change detection setting.
   Ctrl + drag - fine tune.
   
-  On waveform:
+  On Waveform Area:
   Mouswheel - Horizontal Zoom,
   Shift+Mouswheel - Vertical Zoom, 
-  Middle drag - Move Waveform,
-  Left click - set Edit Cursor.
+  Middle drag - Move View(Scroll),
+  Left click - Set Edit Cursor,
+  Shift+Left drag - Move Marker,
+  Right click on Marker - Delete Marker,
+  Right click on Empty Space - Insert Marker,
   Space - Play. 
   ]]) 
 end
@@ -1132,14 +1207,27 @@ end
 ---   MAIN   ---------------------------------------------------------------------------------------
 ----------------------------------------------------------------------------------------------------
 function MAIN()
-  -- Wave from gfx buffer ---
-  Wave:from_gfxBuffer()
-  -- Draw Gate lines --------
-  Gate_Gl:draw_Lines()
+  if Project_Change() then 
+     if not Wave:Validate_Accessor() then Wave.State = false end 
+  end
+  -- Draw Wave, gate lines etc --
+  if Wave.State then 
+       Wave:from_gfxBuffer() -- Wave from gfx buffer
+       Gate_Gl:draw_Lines()  -- Draw Gate lines
+  else Wave:show_help()      -- else show help
+  end
   -- Draw sldrs, btns etc ---
   draw_controls()
 end
-
+------------------------
+-- Get Project Change --
+------------------------
+function Project_Change()
+    local cur_cnt = reaper.GetProjectStateChangeCount(0)
+    if cur_cnt ~= proj_change_cnt then proj_change_cnt = cur_cnt
+       return true  
+    end
+end
 --------------------------------------------------------------------------------
 --   Draw controls(buttons,sliders,knobs etc)  ---------------------------------
 --------------------------------------------------------------------------------
@@ -1186,13 +1274,14 @@ function mainloop()
     Shift = gfx.mouse_cap&8==8   -- Shift state
     Alt   = gfx.mouse_cap&16==16 -- Shift state
     -------------------------
-    -- DRAW,MAIN functions --
+    -- MAIN function --------
     -------------------------
     MAIN() -- main function
     -------------------------
     -------------------------
     last_mouse_cap = gfx.mouse_cap
     last_x, last_y = gfx.mouse_x, gfx.mouse_y
+    gfx.mouse_wheel = 0
     char = gfx.getchar() 
     if char==32 then reaper.Main_OnCommand(40044, 0) end -- play
     if char~=-1 then reaper.defer(mainloop)              -- defer
