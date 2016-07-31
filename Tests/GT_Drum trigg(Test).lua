@@ -478,7 +478,7 @@ local Detect = Button:new(20,380,180,25, 0.4,0.12,0.12,0.3, "Get Selection",    
         end
      end
      ---------- 
-     reaper.ShowConsoleMsg("Full Process time = " .. reaper.time_precise()-start_time .. '\n')--time test 
+    --reaper.ShowConsoleMsg("Full Process time = " .. reaper.time_precise()-start_time .. '\n')--time test 
   end
 ----------------------------------- 
 local Create_MIDI = Button:new(590,380,200,25, 0.4,0.12,0.12,0.3, "Create MIDI",    "Arial",15 )
