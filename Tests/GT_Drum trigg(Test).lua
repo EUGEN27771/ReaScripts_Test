@@ -470,6 +470,7 @@ local Detect = Button:new(20,380,180,25, 0.4,0.12,0.12,0.3, "Get Selection",    
   function()
      local start_time = reaper.time_precise()
      ----------
+     Wave:Destroy_Track_Accessor() -- Destroy previos AA(освобождает память)
      Wave.State = false -- reset Wave.State
      if Wave:Create_Track_Accessor() then Wave:Processing()
         if Wave.State then
@@ -673,72 +674,95 @@ function Gate_Gl:draw_Lines()
                  else scale = 1/Gate_Gl.maxPeak   -- velocity scale by Peaks
     end
     -- Pos, X, Y scale ---------
-    local Pos_smpls = Wave.Pos/Wave.X_scale     -- Стартовая позиция отрисовки в семплах!
+    local start_smpl = Wave.Pos/Wave.X_scale     -- Стартовая позиция отрисовки в семплах!
     local Xsc = Wave.X_scale * Wave.Zoom * Z_w  -- x scale(regard zoom) for trigg lines
     local Yop = Wave.y + Wave.h  -- y start wave coord for velo points
     local Ysc = Wave.h * scale   -- y scale for velo points 
     
-    -- lines, points color -----
-    gfx.set(1, 1, 0) -- gate line, point color
+    
+    --------------------------------------------------------
+    -- Draw, capture ---------------------------------------
+    --------------------------------------------------------
+    gfx.set(1, 1, 0, 0.7) -- gate line, point color
     ----------------------------
     for i=1, #self.State_Points, 2 do
-       -- draw line, velo ------ 
-       local line_x   = Wave.x + (self.State_Points[i] - Pos_smpls) * Xsc  -- line x coord
-       local velo_y   = Yop -  self.State_Points[i+1][mode] * Ysc          -- velo y coord    
-       -------------------------
-       -------------------------
-       if line_x>=Wave.x and line_x<=Wave.x+Wave.w then
-          ----------------------
-          gfx.a = 0.6     -- gate line a
-          gfx.line(line_x, Wave.y, line_x, Yop-1)
-          ----------------------
-          gfx.a = 0.8     -- velo point a
-          gfx.circle(line_x, velo_y, 2,1,1) -- Velocity point
-       end
-       -------------------------
-       if not self.captd and abs(line_x-gfx.mouse_x)<10 and ((Shift and Wave:mouseDown()) or 
-          Wave:mouseR_Down()) then self.captd = i
-       end
-       -------------------------
+        local line_x   = Wave.x + (self.State_Points[i] - start_smpl) * Xsc  -- line x coord
+        local velo_y   = Yop -  self.State_Points[i+1][mode] * Ysc            -- velo y coord    
+        -------------------------
+        -- draw line, velo ------
+        -------------------------
+        if line_x>=Wave.x and line_x<=Wave.x+Wave.w then -- Verify line range
+           gfx.line(line_x, Wave.y, line_x, Yop-1)       -- Draw Trigg Line
+           gfx.circle(line_x, velo_y, 2,1,1)             -- Draw Velocity point
+        end
+        
+        -------------------------
+        -- Get mouse ------------
+        -------------------------
+        if not self.cap_ln and abs(line_x-gfx.mouse_x)<10 then 
+           if Wave:mouseDown() or Wave:mouseR_Down() then self.cap_ln = i end
+        end
     end
   
-  ------------------------
-  ------------------------  
+    --------------------------------------------------------------------------
+    ------------------------ Эти действия нужно вынести в отдельную функцию!!! 
       ------------------------------------------------------
       -- Operations witch captured etc ---------------------
       ------------------------------------------------------
-      if self.captd and Shift and Wave:mouseDown() then
-        -- Move -----------------------------------------
-        local line_x = Wave.x + (self.State_Points[self.captd] - Pos_smpls) * Xsc  -- line x coord
-        local curs_y = min(max(gfx.mouse_y, Wave.y), Yop)
-             gfx.set(1, 1, 1, 1) -- cursor color 
-             gfx.line(line_x-12, curs_y, line_x+12, curs_y)
-             gfx.circle(line_x, curs_y, 3 , 0, 1)
-             ---------
-             self.State_Points[self.captd] = self.State_Points[self.captd] + (gfx.mouse_x-last_x) / Xsc
-        -- Delete ---------------------------------------
-        elseif self.captd and Wave:mouseR_Down() then gfx.x, gfx.y  = gfx.mouse_x, gfx.mouse_y
-          if gfx.showmenu("Delete")==1 then
-             table.remove(self.State_Points,self.captd) -- Del self.captd - Элементы смещаются влево!
-             table.remove(self.State_Points,self.captd) -- Поэтому, опять тот же индекс(а не self.captd+1)
+      if self.cap_ln then
+          -- Change Velo -------------------------
+          if Ctrl then
+              local curs_x = Wave.x + (self.State_Points[self.cap_ln] - start_smpl) * Xsc  -- x coord
+              local curs_y = min(max(gfx.mouse_y, Wave.y), Yop)                            -- y coord
+              gfx.set(1, 1, 1, 1) -- cursor color 
+              gfx.line(curs_x-12, curs_y, curs_x+12, curs_y) -- cursor line
+              gfx.line(curs_x, curs_y-12, curs_x, curs_y+12) -- cursor line
+              gfx.circle(curs_x, curs_y, 5, 0, 1)            -- cursor point
+              ---------
+              local veloRMS  = (Yop - curs_y)/(Wave.h/Gate_Gl.maxRMS)  -- veloRMS from mouse y pos
+              local veloPeak = (Yop - curs_y)/(Wave.h/Gate_Gl.maxPeak) -- veloPeak from mouse y pos
+              self.State_Points[self.cap_ln+1] = {veloRMS, veloPeak}
           end
-        -- Insert  --------------------------------------
-        elseif Wave:mouseR_Down() then gfx.x, gfx.y  = gfx.mouse_x, gfx.mouse_y
-          if gfx.showmenu("Insert")==1 then
-             local line_pos = Pos_smpls + gfx.mouse_x/Xsc            -- Time point(in Samples!) from mouse x pos
-             local veloRMS  = (Yop - gfx.y)/(Wave.h/Gate_Gl.maxRMS)  -- veloRMS from mouse y pos
-             local veloPeak = (Yop - gfx.y)/(Wave.h/Gate_Gl.maxPeak) -- veloPeak from mouse y pos
-             table.insert(self.State_Points, line_pos)            -- В конец таблицы
-             table.insert(self.State_Points, {veloRMS, veloPeak}) -- В конец таблицы
-             ----------
-             self.captd = #self.State_Points
-          end 
+          -- Move Line ---------------------------
+          if Shift then 
+              local curs_x = min(max(gfx.mouse_x, Wave.x), Wave.x + Wave.w)                -- x coord
+              local curs_y = min(max(gfx.mouse_y, Wave.y), Yop)                            -- y coord
+              gfx.set(1, 1, 1, 1) -- cursor color 
+              gfx.line(curs_x-12, curs_y, curs_x+12, curs_y) -- cursor line
+              gfx.line(curs_x, curs_y-12, curs_x, curs_y+12) -- cursor line
+              gfx.circle(curs_x, curs_y, 5, 0, 1)            -- cursor point
+              ---------
+              self.State_Points[self.cap_ln] = start_smpl + (curs_x-Wave.x) / Xsc -- Set New Position
+          end
+          -- Delete Line -------------------------
+          if Wave:mouseR_Down() then gfx.x, gfx.y  = mouse_ox, mouse_oy
+              if gfx.showmenu("Delete")==1 then
+                 table.remove(self.State_Points,self.cap_ln) -- Del self.cap_ln - Элементы смещаются влево!
+                 table.remove(self.State_Points,self.cap_ln) -- Поэтому, опять тот же индекс(а не self.cap_ln+1)
+              end
+          end       
+          ----------------------------------------
       end
+      
+      ------------------------------------------------------
+      -- Insert Line(on R click) ---------------------------
+      ------------------------------------------------------
+      if Wave:mouseR_Down() then gfx.x, gfx.y  = mouse_ox, mouse_oy
+            if gfx.showmenu("Insert")==1 then
+               local line_pos = start_smpl + (mouse_ox-Wave.x)/Xsc            -- Time point(in Samples!) from mouse x pos
+               local veloRMS  = (Yop - mouse_oy)/(Wave.h/Gate_Gl.maxRMS)  -- veloRMS from mouse y pos
+               local veloPeak = (Yop - mouse_oy)/(Wave.h/Gate_Gl.maxPeak) -- veloPeak from mouse y pos
+               table.insert(self.State_Points, line_pos)            -- В конец таблицы
+               table.insert(self.State_Points, {veloRMS, veloPeak}) -- В конец таблицы
+               ----------
+               self.cap_ln = #self.State_Points
+            end
+      end 
       
       ------------------------------------------------------
       -- Update captured state if mouse released -----------
       ------------------------------------------------------
-      if self.captd and Wave:mouseUp() then self.captd = false  
+      if self.cap_ln and Wave:mouseUp() then self.cap_ln = false  
          if CreateMIDIMode.norm_val == 2 then Wave:Create_MIDI() end -- Auto-create MIDI, when mode == 2(use sel item)
       end
 end
@@ -1033,6 +1057,7 @@ function Wave:Processing()
         reaper.GetAudioAccessorSamples(self.AA, srate,n_chans, self.sel_start,self.Samples, in_buf) -- orig samples to in_buf for drawing
         self.in_buf  = in_buf.table()   -- to table in_buf
         self:Create_Peaks(1)  -- Create_Peaks input(Original) wave peaks
+        self.in_buf  = nil    -- входной больше не нужен
     end
     
     -------------------------------------------------------------
