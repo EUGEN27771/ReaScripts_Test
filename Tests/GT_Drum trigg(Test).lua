@@ -1221,6 +1221,8 @@ function Wave:show_help()
   Middle drag - Move View(Scroll),
   Left click - Set Edit Cursor,
   Shift+Left drag - Move Marker,
+  Ctrl+Left drag - Change Velocity,
+  Shift+Ctrl+Left drag - Move Marker and Change Velocity,
   Right click on Marker - Delete Marker,
   Right click on Empty Space - Insert Marker,
   Space - Play. 
