@@ -739,7 +739,7 @@ function Gate_Gl:draw_Lines()
       ------------------------------------------------------
       -- Insert Line(on R click) ---------------------------
       ------------------------------------------------------
-      if Wave:mouseR_Down() then gfx.x, gfx.y  = mouse_ox, mouse_oy
+      if not self.cap_ln and Wave:mouseR_Down() then gfx.x, gfx.y  = mouse_ox, mouse_oy
             if gfx.showmenu("Insert")==1 then
                local line_pos = start_smpl + (mouse_ox-Wave.x)/Xsc            -- Time point(in Samples!) from mouse x pos
                local veloRMS  = (Yop - mouse_oy)/(Wave.h/Gate_Gl.maxRMS)  -- veloRMS from mouse y pos
