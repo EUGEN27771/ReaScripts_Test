@@ -1380,10 +1380,11 @@ function Wave:draw_waveform(mode, r,g,b,a)
     local Zfact = self.max_Zoom/self.Zoom  -- zoom factor
     local Ppos = self.Pos*self.max_Zoom    -- старт. позиция в "мелкой"-Peak_TB для начала прорисовки  
     local curr = ceil(Ppos+1)
+    local n_Peaks = w*self.max_Zoom        -- Макс. доступное кол-во пиков
     gfx.set(r,g,b,a)                       -- set color
     -- уточнить ----------------
     for i=1, w do            
-       local next = i*Zfact + Ppos
+       local next = min( i*Zfact + Ppos, n_Peaks ) -- грубоватое исправление...
        local min_peak, max_peak, peak = 0, 0, 0 
           for p=curr, next do
               peak = Peak_TB[p][1]
