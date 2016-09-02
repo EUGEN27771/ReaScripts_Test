@@ -594,8 +594,9 @@ function Frame:draw()
 end
 
 
+
 ----------------------------------------------------------------------------------------------------
---*** Sliders ************************************************************************************--
+-- Sliders -----------------------------------------------------------------------------------------
 ----------------------------------------------------------------------------------------------------
 local Sensetive = H_Slider:new(10,10,230,20,  0.3,0.5,0.5,0.3, "Sensetive","Arial",15, 0.2 )
 function Sensetive:draw_val()
@@ -646,7 +647,7 @@ local Slider_TB = {Sensetive,Threshold,Retrig}
 
 
 ----------------------------------------------------------------------------------------------------
---** Script **************************************************************************************--
+-- Script ------------------------------------------------------------------------------------------
 ----------------------------------------------------------------------------------------------------
 function Time_Test(start_time, msg_txt)  -- time test function
   local msg_txt = msg_txt or "Proccessing Time = "
@@ -655,7 +656,7 @@ end
 ----------------------------------------------------------------------
 --  Set Threshold, Sensetive Values  ---------------------------------
 ----------------------------------------------------------------------
-function Set_Thresh_Sens_Values()
+function Set_ThreshSens_Values()
   -- Set sensetive --------
   reaper.Main_OnCommand(967, 0)  -- "reset" sensetive
   for i=1, Sensetive.form_val do     -- new set value
@@ -668,25 +669,20 @@ function Set_Thresh_Sens_Values()
   end
 end
 
-----------------------------------------------------------------------------------------------------
-----------------------------------------------------------------------------------------------------
-----------------------------------------------------------------------------------------------------
 ----------------------------------------------------------------------
 -- Create Stretch Markers tables -------------------------------------
 ----------------------------------------------------------------------
-function Create_StretchMarkers(item, take, mrks_start, mrks_end )
+function Create_MarkersTable(item, take, mrks_start, mrks_end )
   local mark_tb = {}
   ----------------------
   reaper.SelectAllMediaItems(0, false)     -- unsel all items
   reaper.SetMediaItemSelected(item, true)  -- sel only current item
   reaper.Main_OnCommand(41845, 0)          -- remove str-marks in time sel(from sel item)
   ----------------------
-  local curs_pos = mrks_start
-  local last_curs_pos = -1
-  local retrig = Retrig.form_val/1000 --???
+  local retrig = Retrig.form_val/1000
   local last_trig = - retrig
+  local curs_pos, last_curs_pos
   ----------------------
-  reaper.Main_OnCommand(41843, 0)               -- add str-marks(at time sel start-end)
   reaper.SetEditCurPos(mrks_start, false, false) -- cursor to time sel start 
   mark_tb[1] = mrks_start                        -- first mark
   --------------------------------------
@@ -709,7 +705,7 @@ end
 ----------------------------------------------------------------------
 --  Compare_StretchMarkers(ref_tb and proc_tb)  ----------------------
 ----------------------------------------------------------------------
-function Compare_StretchMarkers(ref_tb, proc_tb, ref_take, proc_take)
+function Compare_MarkersTables(ref_tb, proc_tb, ref_take, proc_take)
   ------------------------------------------
   local search_zone = (Retrig.form_val/1000)/2 -- зона поиска "парных" маркеров 
   ------------------------------------------
@@ -770,6 +766,7 @@ function Insert_Align_ProcStretchMarkers(proc_item, proc_take, proc_tb) -- var2
      end   
   end 
 end
+
 ----------------------------------------------------------------------
 -- Get Start, End Range ----------------------------------------------
 ----------------------------------------------------------------------
@@ -783,6 +780,7 @@ function Get_StartEndRange(ref_item, proc_item)
   proc_item_end   = proc_item_start+reaper.GetMediaItemInfo_Value(proc_item, 'D_LENGTH')
   return math.max(sel_start,ref_item_start,proc_item_start), math.min(sel_end,ref_item_end,proc_item_end)
 end
+
 ----------------------------------------------------------------------
 -- Get Items and act Takes -------------------------------------------
 ----------------------------------------------------------------------
@@ -804,16 +802,17 @@ function Get_ItemsTakes()
   ------------------------------------------------
   return true, ref_item, ref_take, proc_item, proc_take
 end
+
 ----------------------------------------------------------------------
 -- Main --------------------------------------------------------------
 ----------------------------------------------------------------------
 function MAIN()
-  Set_Thresh_Sens_Values() -- Set Detection settings
+  Set_ThreshSens_Values() -- Set Detection settings
   -- Get items, takes ----------------------------
   local retval, ref_item, ref_take, proc_item, proc_take = Get_ItemsTakes()
   if type(retval)=="string" then return reaper.MB(retval, "Info", 0) end
   -- Get StartEndRange - selection(or items edges in sel) --
-  mrks_start, mrks_end = Get_StartEndRange(ref_item, proc_item) -- 
+  local mrks_start, mrks_end = Get_StartEndRange(ref_item, proc_item) -- 
   ------------------------------------------------
   ------------------------------------------------
   reaper.PreventUIRefresh(777)
@@ -821,18 +820,18 @@ function MAIN()
   reaper.Main_OnCommand(reaper.NamedCommandLookup("_SWS_SAVEVIEW"), 0) -- SAVE VIEW
   local usr_curs_pos = reaper.GetCursorPosition() -- store usr cursor pos
     ----------------------------------------------
-    -- Create markers ----------------------------
-    local ref_tb  = Create_StretchMarkers(ref_item, ref_take, mrks_start, mrks_end)    -- ref str_marks
-    local proc_tb = Create_StretchMarkers(proc_item, proc_take, mrks_start, mrks_end) -- proc str_marks
-    -----------------
-    reaper.SetMediaItemSelected(ref_item, true)  -- restore sel on ref
-    reaper.SetMediaItemSelected(proc_item, true) -- restore sel on proc
-    
-    --- Compare, Insert markers ------------------
-    Compare_StretchMarkers(ref_tb, proc_tb, ref_take, proc_take)
+    -- Create markers tables ---------------------
+    local ref_tb  = Create_MarkersTable(ref_item, ref_take, mrks_start, mrks_end)   -- ref str_marks
+    local proc_tb = Create_MarkersTable(proc_item, proc_take, mrks_start, mrks_end) -- proc str_marks
+    ----------------------------------------------
+    --- Compare, Insert, Align markers -----------
+    Compare_MarkersTables(ref_tb, proc_tb, ref_take, proc_take)
     Insert_RefStretchMarkers(ref_item, ref_take, ref_tb)    -- insert refs
     Insert_Align_ProcStretchMarkers(proc_item, proc_take, proc_tb)  -- insert and align proc
-    ----------------------------------------------
+  ------------------------------------------------
+  ------------------------------------------------
+  reaper.SetMediaItemSelected(ref_item, true)  -- restore item sel on ref
+  reaper.SetMediaItemSelected(proc_item, true) -- restore item sel on proc
   reaper.SetEditCurPos(usr_curs_pos, false, false) -- restore usr cursor pos
   reaper.Main_OnCommand(reaper.NamedCommandLookup("_SWS_RESTOREVIEW"), 0) -- RESTORE VIEW
   reaper.Undo_EndBlock("Align Audio by transients", 0)
