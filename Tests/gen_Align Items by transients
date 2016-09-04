@@ -596,9 +596,12 @@ end
 
 
 ----------------------------------------------------------------------------------------------------
--- Sliders -----------------------------------------------------------------------------------------
+-- Controls ----------------------------------------------------------------------------------------
 ----------------------------------------------------------------------------------------------------
-local Sensetive = H_Slider:new(10,10,230,20,  0.3,0.5,0.5,0.3, "Sensetive","Arial",15, 0.2 )
+--------------------------------------------------
+-- Sliders ---------------------------------------
+--------------------------------------------------
+local Sensetive = H_Slider:new(10,10,300,18,  0.3,0.5,0.5,0.3, "Sensetive","Arial",15, 0.2 )
 function Sensetive:draw_val()
   self.form_val = math.ceil(self.norm_val*100)  -- form value
   local x,y,w,h  = self.x,self.y,self.w,self.h
@@ -609,7 +612,7 @@ function Sensetive:draw_val()
 end
 
 ---------------
-local Threshold = H_Slider:new(10,40,230,20,  0.3,0.5,0.5,0.3, "Threshold","Arial",15, 0.7 )
+local Threshold = H_Slider:new(10,30,300,18,  0.3,0.5,0.5,0.3, "Threshold","Arial",15, 0.7 )
 function Threshold:draw_val()
   self.form_val = -60 + self.norm_val*60  -- form value
   self.form_val = math.floor(self.form_val/0.2)*0.2
@@ -621,7 +624,7 @@ function Threshold:draw_val()
 end
 
 ---------------
-local Retrig = H_Slider:new(10,70,230,20,  0.3,0.5,0.5,0.3, "Retrig","Arial",15, 0.3 )
+local Retrig = H_Slider:new(10,50,300,18,  0.3,0.5,0.5,0.3, "Retrig","Arial",15, 0.3 )
 function Retrig:draw_val()
   self.form_val = 50+ math.floor(self.norm_val*500)
   local x,y,w,h  = self.x,self.y,self.w,self.h
@@ -632,19 +635,36 @@ function Retrig:draw_val()
 end
 
 --------------------------------------------------
--- onUp function for sliders ---------------------
+-- Checboxes -------------------------------------
 --------------------------------------------------
-function Sliders_onUp()
+local RefItem = CheckBox:new(10,80,140,20,  0.3,0.5,0.5,0.3, "", "Arial",15,  1,
+                              {"Reference - Upper Item","Reference - Lower Item"} )
+
+--------------------------------------------------
+-- Buttons ---------------------------------------
+--------------------------------------------------
+local Quantize = Button:new(170,80,140,20,  0.3,0.5,0.5,0.3, "Quantize markers", "Arial",15 )
+
+
+--------------------------------------------------
+-- controls functions ----------------------------
+--------------------------------------------------
+function onUp_Main()
   Run_Main = true
 end
 ---------------
-Sensetive.onUp = Sliders_onUp
-Threshold.onUp = Sliders_onUp  
-Retrig.onUp = Sliders_onUp
-------------------------
-------------------------
-local Slider_TB = {Sensetive,Threshold,Retrig}
+Sensetive.onUp  = onUp_Main
+Threshold.onUp  = onUp_Main  
+Retrig.onUp     = onUp_Main
+RefItem.onClick = onUp_Main
+Quantize.onClick = function() reaper.Main_OnCommand(41847, 0) end
 
+--------------------------------------------------
+-- Controls Tables -------------------------------
+--------------------------------------------------
+local Slider_TB = {Sensetive,Threshold,Retrig}
+local CheckBox_TB = {RefItem}
+local Button_TB = {Quantize}
 
 ----------------------------------------------------------------------------------------------------
 -- Script ------------------------------------------------------------------------------------------
@@ -745,10 +765,12 @@ end
 ----------------------------------------------------------------------
 function Insert_RefStretchMarkers(ref_item, ref_take, ref_tb)
   local item_start = reaper.GetMediaItemInfo_Value(ref_item, "D_POSITION" )
+  local playrate = reaper.GetMediaItemTakeInfo_Value(ref_take, 'D_PLAYRATE') 
   -- Insert markers --
   for i=1, #ref_tb do
-     local pos = ref_tb[i]
-     if pos then reaper.SetTakeStretchMarker(ref_take, -1, pos-item_start) end   
+     if ref_tb[i] then local pos = (ref_tb[i]-item_start)*playrate
+      reaper.SetTakeStretchMarker(ref_take, -1, pos)
+     end   
   end 
 end
 
@@ -758,9 +780,11 @@ end
 function Insert_Align_ProcStretchMarkers(proc_item, proc_take, proc_tb) -- var2
   local proc_offs  = reaper.GetMediaItemTakeInfo_Value(proc_take, 'D_STARTOFFS')
   local item_start = reaper.GetMediaItemInfo_Value(proc_item, "D_POSITION" )
+  local playrate = reaper.GetMediaItemTakeInfo_Value(proc_take, 'D_PLAYRATE') -- playrate
+  -- Insert, align markers --
   for i=1, #proc_tb do
      if proc_tb[i] then 
-        local orig_pos, new_pos = proc_tb[i][1]-item_start, proc_tb[i][2]-item_start 
+        local orig_pos, new_pos = (proc_tb[i][1]-item_start)*playrate, (proc_tb[i][2]-item_start)*playrate  
         local mark_idx = reaper.SetTakeStretchMarker(proc_take, -1, orig_pos, orig_pos+proc_offs) -- add to orig pos
         reaper.SetTakeStretchMarker(proc_take, mark_idx, new_pos)                                 -- change position
      end   
@@ -787,18 +811,15 @@ end
 function Get_ItemsTakes()
   if reaper.CountSelectedMediaItems(0)<2 then return "Need 2 selected Audio-items!" end
   -- Get items, takes ----------------------------
-  local ref_item  = reaper.GetSelectedMediaItem(0, 0)
-  local ref_take  = reaper.GetActiveTake(ref_item)
-  local proc_item = reaper.GetSelectedMediaItem(0, 1)
-  local proc_take = reaper.GetActiveTake(proc_item)
+  local ref,proc, ref_item,ref_take, proc_item,proc_take
+  if RefItem.norm_val == 1 then ref,proc = 0,1 else ref,proc = 1,0 end
+  ref_item  = reaper.GetSelectedMediaItem(0, ref)
+  ref_take  = reaper.GetActiveTake(ref_item)
+  proc_item = reaper.GetSelectedMediaItem(0, proc)
+  proc_take = reaper.GetActiveTake(proc_item)
   ------------------------------------------------
   if not ref_take or not proc_take then return "Empty item!" end -- 
   if reaper.TakeIsMIDI(ref_take) or reaper.TakeIsMIDI(proc_take) then return "MIDI item!" end -- 
-  ------------------------------------------------
-  if reaper.GetMediaItemTakeInfo_Value(ref_take, 'D_PLAYRATE')~=1 or  
-     reaper.GetMediaItemTakeInfo_Value(proc_take, 'D_PLAYRATE')~=1
-     then return "Playrate must be 1!" -- playrate ~= 1
-  end
   ------------------------------------------------
   return true, ref_item, ref_take, proc_item, proc_take
 end
@@ -834,14 +855,13 @@ function MAIN()
   reaper.SetMediaItemSelected(proc_item, true) -- restore item sel on proc
   reaper.SetEditCurPos(usr_curs_pos, false, false) -- restore usr cursor pos
   reaper.Main_OnCommand(reaper.NamedCommandLookup("_SWS_RESTOREVIEW"), 0) -- RESTORE VIEW
-  reaper.Undo_EndBlock("Align Audio by transients", 0)
+  reaper.Undo_EndBlock("Align Items by transients", 0)
   reaper.PreventUIRefresh(-777)
   ------------------------------------------------
   ------------------------------------------------
-  reaper.UpdateArrange()
-  reaper.UpdateTimeline()
   reaper.UpdateItemInProject(ref_item)
   reaper.UpdateItemInProject(proc_item)
+  reaper.UpdateTimeline()
 end
 
 
@@ -850,9 +870,9 @@ end
 --   Draw controls(buttons,sliders,knobs etc)  ---------------------------------
 --------------------------------------------------------------------------------
 function draw_controls()
-    --for key,btn    in pairs(Button_TB)   do btn:draw()    end 
+    for key,btn    in pairs(Button_TB)   do btn:draw()    end 
     for key,sldr   in pairs(Slider_TB)   do sldr:draw()   end
-    --for key,ch_box in pairs(CheckBox_TB) do ch_box:draw() end
+    for key,ch_box in pairs(CheckBox_TB) do ch_box:draw() end
     --for key,frame  in pairs(Frame_TB)    do frame:draw()  end       
 end
 --------------------------------------------------------------------------------
@@ -864,7 +884,7 @@ function Init()
     local Wnd_bgd = R + G*256 + B*65536 -- red+green*256+blue*65536  
     local Wnd_Title = "Align Items"
     local Wnd_Dock,Wnd_X,Wnd_Y = 0,100,350 
-    Wnd_W,Wnd_H = 250,100 -- global values(used for define zoom level)
+    Wnd_W,Wnd_H = 320,110 -- global values(used for define zoom level)
     -- Init window ------
     gfx.clear = Wnd_bgd         
     gfx.init( Wnd_Title, Wnd_W,Wnd_H, Wnd_Dock, Wnd_X,Wnd_Y )
