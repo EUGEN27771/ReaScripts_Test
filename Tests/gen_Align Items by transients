@@ -788,30 +788,28 @@ function Compare_MarkersTables(ref_tb, proc_tb, ref_take, proc_take)
   ------------------------------------------
   local search_zone = (Retrig.form_val/1000)/2 -- зона поиска "парных" маркеров 
   ------------------------------------------
-  -- compare and rebiuild marker-tables ----
+  -- compare and rebuild marker-tables -----
   local next=1
   for i=1, #ref_tb do 
-      local ref_val = ref_tb[i]     -- Референсный маркер из ref_tb 
+      local ref_pos  = ref_tb[i]    -- Позиция референсного маркера(из ref_tb) 
       local min_diff = search_zone
-      local proc_val, res_val, diff 
-      -------------------
+      local proc_pos, diff 
+      ------------------------
       for j=next, #proc_tb  do
-          proc_val = proc_tb[j]     -- Текущий маркер из proc_tb
-          -- for break ---------
-          if proc_val>ref_val+search_zone then break end -- Выход из цикла по выходу из зоны поиска
-          ----------------------
-          diff = math.abs(ref_val-proc_val)
-          ----------------------
+          proc_pos = proc_tb[j]     -- Позиция текущего маркера(из proc_tb)
+          -- for break -------
+          if proc_pos>ref_pos+search_zone then break end -- Выход из цикла по выходу из зоны поиска
+          --------------------
+          diff = math.abs(ref_pos-proc_pos)
+          --------------------
           if diff<min_diff then min_diff = diff    -- обнов. мин. значение и сопутствующие
-                 res_val    = proc_val   -- пригодится потом
-                 proc_tb[j] = {res_val, ref_val}   -- найденный марк, ориг. позиция и необх. значение
-            else proc_tb[j] = false      -- proc-маркер без пары - на удаление
+                 proc_tb[j] = {proc_pos, ref_pos}  -- найденный марк, ориг. позиция и необх. значение
+            else proc_tb[j] = false                -- proc-маркер без пары - на удаление
           end
-          ---------------------
+          --------------------
           next = j+1
       end
-      -------------------
-      if not res_val then ref_tb[i] = false end   -- ref-маркер без пары - на удаление
+      ------------------------
   end
   ------------------------------------------
   -- process rest from proc_tb if need -----
@@ -825,16 +823,15 @@ end
 function Insert_RefStretchMarkers(ref_item, ref_take, ref_tb)
   local item_start = reaper.GetMediaItemInfo_Value(ref_item, "D_POSITION" )
   local playrate = reaper.GetMediaItemTakeInfo_Value(ref_take, 'D_PLAYRATE') 
-  -- Insert markers --
+  -- Insert ref markers --
   for i=1, #ref_tb do
-     if ref_tb[i] then local pos = (ref_tb[i]-item_start)*playrate
+      local pos = (ref_tb[i]-item_start)*playrate
       reaper.SetTakeStretchMarker(ref_take, -1, pos)
-     end   
   end 
 end
 
 ----------------------------------------------------------------------
---  Insert and Align Proc Stretch Markers(proc to ref)  -----------------
+--  Insert and Align Proc Stretch Markers(proc to ref)  --------------
 ----------------------------------------------------------------------
 function Insert_Align_ProcStretchMarkers(proc_item, proc_take, proc_tb)
   local proc_offs  = reaper.GetMediaItemTakeInfo_Value(proc_take, 'D_STARTOFFS') -- нужно для srcposIn!
@@ -847,6 +844,7 @@ function Insert_Align_ProcStretchMarkers(proc_item, proc_take, proc_tb)
         local orig_pos     = (proc_tb[i][1]-item_start)*playrate       -- original position
         local new_pos_max  = (proc_tb[i][2]-item_start)*playrate       -- 100% align position
         local new_pos  = orig_pos + (new_pos_max-orig_pos)*align_mlt   -- new position regard align_mlt
+        -- добавить проверку позиций! --
         local mark_idx = reaper.SetTakeStretchMarker(proc_take, -1, orig_pos, orig_pos+proc_offs) -- add mark to orig pos
         reaper.SetTakeStretchMarker(proc_take, mark_idx, new_pos)                                 -- change position
      end   
@@ -854,7 +852,7 @@ function Insert_Align_ProcStretchMarkers(proc_item, proc_take, proc_tb)
 end
 
 ----------------------------------------------------------------------
--- Get Start, End Range -------------------------------------------------
+-- Get Start, End Range ----------------------------------------------
 ----------------------------------------------------------------------
 function Get_StartEndRange(ref_item, proc_item)
   local ref_item_start, ref_item_end, proc_item_start, proc_item_end   
@@ -872,7 +870,7 @@ function Get_StartEndRange(ref_item, proc_item)
 end
 
 ----------------------------------------------------------------------
--- Get Items and active Takes -------------------------------------------
+-- Get Items and active Takes ----------------------------------------
 ----------------------------------------------------------------------
 function Get_SelItemsTakes()
   local items_cnt = reaper.CountSelectedMediaItems(0)
@@ -895,19 +893,25 @@ function MAIN()
   -- Get selected Items, active Takes --
   local items_tb = Get_SelItemsTakes()
   if #items_tb<2 then return reaper.MB("Need two or more selected Audio-Items!", "Info", 0) end
-  ----------------------
-  RefItem.norm_val2 = {}
-  for k,v in pairs(items_tb) do
-     local retval, name = reaper.GetSetMediaItemTakeInfo_String(items_tb[k][2], "P_NAME", "", false)
-     name = "Refer : "..name
-     local len = #name 
-     while gfx.measurestr(name)>RefItem.w-15 do
-           len = len-1  
-           name = name:sub(1,len)..".."
-     end 
-     RefItem.norm_val2[k] = name
-  end
- local ref = RefItem.norm_val
+    ---------------------------------
+    -- исправить, перестройку меню -- 
+    -- перенести в контролы! --------    
+    RefItem.norm_val2 = {}
+    for k,v in pairs(items_tb) do
+       local retval, name = reaper.GetSetMediaItemTakeInfo_String(items_tb[k][2], "P_NAME", "", false)
+       name = "Reference : "..name
+       local len = #name 
+       while gfx.measurestr(name)>RefItem.w-15 do
+             len = len-1  
+             name = name:sub(1,len)..".."
+       end 
+       RefItem.norm_val2[k] = name
+    end
+   --------------------------------- 
+   local ref = RefItem.norm_val
+   ---------------------------------
+   if ref>#items_tb then ref = 1; RefItem.norm_val = 1 end -- if sel items will be changed
+  
   ------------------------------------------------
   ------------------------------------------------
   reaper.PreventUIRefresh(777)
@@ -916,10 +920,10 @@ function MAIN()
   local usr_curs_pos = reaper.GetCursorPosition() -- store usr(current) cursor pos
   
     ------------------------------------------------ 
-    local ref_item, ref_take = items_tb[ref][1], items_tb[ref][2]   -- Reference
+    local ref_item, ref_take = items_tb[ref][1], items_tb[ref][2]      -- Reference
     -- Реф. таблицу - созд. один раз и в дальнейшем коприруется --
-    local mrks_start, mrks_end = Get_StartEndRange(ref_item, ref_item) -- передается Ref-айтем в арг. чтобы не переписывать(поправить)
-    local ref_tb = Create_MarkersTable(ref_item, ref_take, mrks_start, mrks_end) -- ref str_marks(реф. маркеры - не трогаются, исп. копия)
+    local mrks_start, mrks_end = Get_StartEndRange(ref_item, ref_item) -- передается Ref-айтем в арг. чтобы не переписывать
+    local ref_tb = Create_MarkersTable(ref_item, ref_take, mrks_start, mrks_end) -- ref str_marks(реф. маркеры - не трогаются)
     ------------------------------------------------
     ------------------------------------------------  
     for i=1, #items_tb do 
@@ -930,22 +934,17 @@ function MAIN()
         local mrks_start, mrks_end = Get_StartEndRange(ref_item, proc_item) -- Для текущей пары айтемов
         ----------------------------------------------
         -- Create markers tables ---------------------
-        local ref_tb_copy = {} -- копия реф. таблицы(можно сделать лок. local ref_tb для цикла, но так яснее)
-        for k,v in pairs(ref_tb) do 
-            ref_tb_copy[k]=ref_tb[k]; ref_tb_copy[v]=ref_tb[v] 
-        end 
-        --local ref_tb  = Create_MarkersTable(ref_item, ref_take, mrks_start, mrks_end)   -- ref str_marks
         local proc_tb = Create_MarkersTable(proc_item, proc_take, mrks_start, mrks_end) -- proc str_marks
         ----------------------------------------------
         --- Compare, Insert, Align markers -----------
-        Compare_MarkersTables(ref_tb_copy, proc_tb, ref_take, proc_take)
+        Compare_MarkersTables(ref_tb, proc_tb, ref_take, proc_take)
         Insert_Align_ProcStretchMarkers(proc_item, proc_take, proc_tb)  -- insert and align proc
       end 
     end
     ------------------------------------------------
     ------------------------------------------------
     Insert_RefStretchMarkers(ref_item, ref_take, ref_tb) -- insert refs(все, влючая непарные)
-    reaper.SelectAllMediaItems(0, false)         -- unsel all items
+    reaper.SelectAllMediaItems(0, false)           -- unsel all items
     for i=1, #items_tb do reaper.SetMediaItemSelected(items_tb[i][1], true) end -- restore sel items 
     ---------------------
   reaper.SetEditCurPos(usr_curs_pos, false, false) -- restore usr cursor pos
@@ -954,11 +953,8 @@ function MAIN()
   reaper.PreventUIRefresh(-777)
   ------------------------------------------------
   ------------------------------------------------
-  --reaper.UpdateItemInProject(ref_item)
-  --reaper.UpdateItemInProject(proc_item)
   reaper.UpdateTimeline()
 end
-
 
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
