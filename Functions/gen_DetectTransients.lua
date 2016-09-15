@@ -10,7 +10,7 @@
 --[[
   ------------------
   samplebuffer    -- The input samples array(lua or reaper.array).
-    Note: It is recommended to use a Lua-array("list") - is much faster much faster than reaper.array.
+    Note: It is recommended to use a Lua-array("list") - is much faster than reaper.array.
     For example, if you have reaper.array - use samplebuffer = samplebuffer.table() before the function call.
     Операции с массивом lua быстрее почти в два раза, это особенно важно для длинных массивов.
     Поэтому лучше использовать массив lua!!!
