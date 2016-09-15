@@ -18,7 +18,7 @@
   srate           -- samplerate - (for example 44100; 48000; 96000 etc). 
   Threshold_dB    -- Threshold in db(for example -24.01; -12.47 etc). The threshold for a fast envelope(not input samples!)
   Sensitivity_dB  -- Min diff between the fast and slow envelope. The smaller the value - more the detected transients. 
-  Retrig_sec      -- Time of inactivity after the last trig in seconds.
+  Retrig_sec      -- Time of inactivity after the last trig in seconds(for example 0.010; 0.007 etc)..
   -------
   Optional(if not specified - default values will be used):      
     attTime1,relTime1 -- fast envelope attack, release(атакa и релиз быстрой огибающей)
@@ -39,7 +39,7 @@ function DetectTransients(samplebuffer, srate, Threshold_dB, Sensitivity_dB, Ret
       local Trans_Points = {}  -- Transient-Points table 
       -------------------------------------------------
       -- Threshold, Sensitivity -----------------------
-      local gain_scale   = 1        -- Можно использувать для масштабирования(при необходимости), default = 1(not scaling)
+      local gain_scale   = 1        -- Можно использовать для масштабирования(при необходимости), default = 1(not scaling)
       local Threshold    = 10^(Threshold_dB/20)/gain_scale -- Threshold_dB - to norm value
       local Sensitivity  = 10^(Sensitivity_dB/20)          -- Sensitivity_dB - to norm value
       local Retrig_smpls = math.floor(Retrig_sec*srate)    -- Retrig_sec - to samples
