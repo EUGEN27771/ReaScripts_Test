@@ -707,9 +707,9 @@ function Gate_Thresh:draw_val_line()
     gfx.line(Wave.x, val_line2, Wave.x+Wave.w-1, val_line2 )
   end
 end
--- Sensetive -------------------------------------
-local Gate_Sensetive = H_Slider:new(270,400,290,18, 0.3,0.5,0.7,0.3, "Sensetive","Arial",15, 0.2 )
-function Gate_Sensetive:draw_val()
+-- Sensitivity -------------------------------------
+local Gate_Sensitivity = H_Slider:new(270,400,290,18, 0.3,0.5,0.7,0.3, "Sensitivity","Arial",15, 0.2 )
+function Gate_Sensitivity:draw_val()
   self.form_val = 2+(self.norm_val)*15       -- form_val
   local x,y,w,h  = self.x,self.y,self.w,self.h
   local val = string.format("%.1f", self.form_val).." dB"
@@ -762,7 +762,7 @@ function Gate_Sldrs_onUp()
 end
 ----------------
 Gate_Thresh.onUp    = Gate_Sldrs_onUp
-Gate_Sensetive.onUp = Gate_Sldrs_onUp
+Gate_Sensitivity.onUp = Gate_Sldrs_onUp
 Gate_Retrig.onUp    = Gate_Sldrs_onUp
 Gate_DetVelo.onUp   = Gate_Sldrs_onUp
 
@@ -796,7 +796,7 @@ end--]]
 --- Slider_TB --------------------------
 ----------------------------------------
 local Slider_TB = {HP_Freq,LP_Freq,Fltr_Gain, 
-                   Gate_Thresh,Gate_Sensetive,Gate_Retrig,Gate_DetVelo,Gate_ReducePoints, 
+                   Gate_Thresh,Gate_Sensitivity,Gate_Retrig,Gate_DetVelo,Gate_ReducePoints, 
                    Gate_VeloScale}
 
 -------------------------------------------------------------------------------------
@@ -922,10 +922,10 @@ function Gate_Gl:Apply_toFiltered()
       -------------------------------------------------
       -- GetSet parameters ----------------------------
       -------------------------------------------------
-      -- Threshold, Sensetive ----------
+      -- Threshold, Sensitivity ----------
       local gain_fltr  = 10^(Fltr_Gain.form_val/20)      -- Gain from Fltr_Gain slider(need for scaling gate Thresh!)
       local Thresh     = 10^(Gate_Thresh.form_val/20)/gain_fltr * block_size  -- Threshold regard fft scale and gain_fltr
-      local Sensetive  = 10^(Gate_Sensetive.form_val/20) -- Gate "Sensetive", diff between - fast and slow envelopes(in dB)
+      local Sensitivity  = 10^(Gate_Sensitivity.form_val/20) -- Gate "Sensitivity", diff between - fast and slow envelopes(in dB)
       -- Attack, Release Time -----------
       -- Эти параметры нужно либо выносить в доп. настройки, либо подбирать тщательнее...
       local attTime1  = 0.001                            -- Env1 attack(sec)
@@ -975,7 +975,7 @@ function Gate_Gl:Apply_toFiltered()
            --------------------------------------------
            -- Trigger ---------------------------------  
            if retrig>retrig_smpls then
-              if envOut1>Thresh and (envOut1/envOut2) > Sensetive then
+              if envOut1>Thresh and (envOut1/envOut2) > Sensitivity then
                  Trig = true; smpl_cnt = 0; retrig = 0; rms_sum, peak_smpl = 0, 0 -- set start-values(for capture velo)
               end
             else envOut2 = envOut1 -- уравнивает огибающие,пока триггер неактивен(здесь важно)
@@ -1379,10 +1379,11 @@ function Wave:draw_waveform(mode, r,g,b,a)
     local w = self.def_xywh[3] -- 1024 = def width
     local Zfact = self.max_Zoom/self.Zoom  -- zoom factor
     local Ppos = self.Pos*self.max_Zoom    -- старт. позиция в "мелкой"-Peak_TB для начала прорисовки  
-    local curr = ceil(Ppos+1)
+    local curr = ceil(Ppos+1)              -- округление
     local n_Peaks = w*self.max_Zoom        -- Макс. доступное кол-во пиков
     gfx.set(r,g,b,a)                       -- set color
-    -- уточнить ----------------
+    -- уточнить, нужно сделать исправление для неориг. размера окна --
+    -- next выходит за w*max_Zoom, а должен - макс. w*max_Zoom(51200) при max_Zoom=50 --
     for i=1, w do            
        local next = min( i*Zfact + Ppos, n_Peaks ) -- грубоватое исправление...
        local min_peak, max_peak, peak = 0, 0, 0 
@@ -1392,7 +1393,7 @@ function Wave:draw_waveform(mode, r,g,b,a)
               peak = Peak_TB[p][2]
               max_peak = max(max_peak, peak)
           end
-        curr = ceil(next) 
+        curr = ceil(next)
         local y, y2 = Y - min_peak *Ysc, Y - max_peak *Ysc 
         gfx.line(i,y, i,y2) -- здесь всегда x=i
     end  
@@ -1766,9 +1767,7 @@ function Wave:Verify_Project_State() --
           --reaper.DestroyAudioAccessor(AA) -- destroy temporary AA
           return true 
        --end
-     --if track not found or Hash changed --
-     else return false 
-   end 
+   end
 end 
 --------------------------------------------------------------------------------
 --   Draw controls(buttons,sliders,knobs etc)  ---------------------------------
@@ -1787,7 +1786,7 @@ function Init()
     -- Some gfx Wnd Default Values ---------------
     local R,G,B = 20,20,20              -- 0...255 format
     local Wnd_bgd = R + G*256 + B*65536 -- red+green*256+blue*65536  
-    local Wnd_Title = "TEST"
+    local Wnd_Title = "Drum Trigger"
     local Wnd_Dock,Wnd_X,Wnd_Y = 0,100,320 
     Wnd_W,Wnd_H = 1044,490 -- global values(used for define zoom level)
     -- Init window ------
@@ -1839,3 +1838,5 @@ end
 --reaper.ClearConsole()
 Init()
 mainloop()
+
+
