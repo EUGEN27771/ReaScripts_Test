@@ -351,7 +351,7 @@ function Init()
     -- Some gfx Wnd Default Values --
     local R,G,B = 25,25,25               -- 0..255 form
     local Wnd_bgd = R + G*256 + B*65536  -- red+green*256+blue*65536  
-    local Wnd_Title = "Simple Transient Detector(lua)"
+    local Wnd_Title = "Create stretch-markers at transients(lua)"
     local Wnd_Dock,Wnd_X,Wnd_Y = 0,200,420
     Wnd_W,Wnd_H = 280,80 -- global values(used for define zoom level)
     -- Init window ------
