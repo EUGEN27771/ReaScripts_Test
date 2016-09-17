@@ -249,7 +249,7 @@ function init()
   local(width, height, dockstate, xpos, ypos)
 ( //-- window -----------
   width = 280; height = 80; dockstate = 0; xpos = 200; ypos = 300;
-  gfx_init("Simple Transient Detector(eel)",width,height,dockstate,xpos,ypos);
+  gfx_init("Create stretch-markers at transients(eel)",width,height,dockstate,xpos,ypos);
   gfx_clear = 25 + 25*256 + 25*65536;
   //-- Init mouse -------
   last_mouse_cap = 0;
