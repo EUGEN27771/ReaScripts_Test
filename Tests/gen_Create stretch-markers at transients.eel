@@ -206,7 +206,7 @@ local(item, srate, Threshold_dB, Sensitivity_dB, Retrig_sec)
     //------------------------
     start = time_precise();
     DetectTransients(item, srate, Threshold_dB, Sensitivity_dB, Retrig_sec);
-    ShowConsoleMsg(sprintf(#, "%f \n", time_precise()-start); );
+    //ShowConsoleMsg(sprintf(#, "%f \n", time_precise()-start); );
   );
 
 );
