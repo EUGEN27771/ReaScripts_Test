@@ -329,7 +329,7 @@ function MAIN()
         -----------------------------------------------------------------    
         start = reaper.time_precise();
         DetectTransients(item, srate, Threshold_dB, Sensitivity_dB, Retrig_sec);
-        reaper.ShowConsoleMsg(reaper.time_precise()-start .."\n")
+        --reaper.ShowConsoleMsg(reaper.time_precise()-start .."\n")
     end
 
 end
