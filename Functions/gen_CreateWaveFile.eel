@@ -1,0 +1,146 @@
+/*   
+   * ReaScript Name: CreateWaveFile
+   * Lua script for Cockos REAPER
+   * Author: EUGEN27771
+   * Author URI: http://forum.cockos.com/member.php?u=50462
+   * Licence: GPL v3
+   * Version: 1.0
+*/
+
+/*
+Общая схема:
+1)Создать файл(в режиме записи бинарных данных): 
+  FilePath = путь, включая имя и расширение(например, "C:/Users/EUGEN/Desktop/Test.wav").
+  fp = fopen(FilePath,"wb");
+2)Записать заголовок(Header) - WriteWaveHeader.
+3)Записать порциями(WriteWaveDataFromBuf) - либо посемплово(WriteWaveDataSample) wav-данные.
+4)Закрыть файл.
+
+Небольшая сложность понимания в 3-м пункте. Данные пишуться последовательно по мере поступления.
+То есть функция вызывается каждый раз при получении нового буфера. Остальное понятно.
+*/
+/*
+Все значения должны быть правильно указаны. Никаких проверок нет.
+В принципе, нужно проверить только fp. Если остальное верно - проблем не будет.
+---------------------------------------------------------
+FilePath,     -- full filepath(with name and extention)
+fp            -- file handle(грубо говоря ссылка на захваченный созданный файл) 
+numSamples,   -- общее кол-во семплов которые будут записаны в файл(учитывая все каналы)  
+audioFormat,  -- формат, сейчас поддерживается только 3(float point)
+nchans,       -- num channels(кол-во каналов)
+srate,        -- samplerate 
+bitspersample -- bitrate, сейчас поддерживается  только 32
+---------------------------------------------------------
+*/
+
+// Функция записывает в файл(fp) заголовок.
+function WriteWaveHeader(fp, numSamples, audioFormat, nchans, srate, bitspersample)
+  local(data_ChunkDataSize)
+(
+  data_ChunkDataSize = numSamples * nchans * bitspersample/8;     // Calculate data_ChunkDataSize
+  //-----------------------------------------------------------------------------------------------------------------
+  //-- RIFF_Chunk =  RIFF_ChunkID, RIFF_chunkSize, RIFF_Type --------------------------------------------------------
+  //-----------------------------------------------------------------------------------------------------------------
+    fprintf(fp, "%s%s%s", 
+                "RIFF",                                           // -- RIFF_ChunkID
+                str_setchar(#, 0, 36+data_ChunkDataSize, 'iu'),   // long  -- 4+(8+fmt_ChunkDataSize)+(8+data_ChunkDataSize)
+                "WAVE");                                          // -- RIFF_Type
+
+  //-----------------------------------------------------------------------------------------------------------------
+  //-- fmt_Chunk = fmt_ChunkID, fmt_ChunkDataSize, audioFormat, nchans, srate, byterate, blockalign, bitspersample --
+  //-----------------------------------------------------------------------------------------------------------------
+    fprintf(fp, "%s%s%s%s%s%s%s%s", 
+                "fmt ",                                           // -- fmt_ChunkID 
+                str_setchar(#, 0, 16, 'iu'),                      // long  -- fmt_ChunkDataSize
+                str_setchar(#, 0, audioFormat, 'su'),             // short -- audioFormat
+                str_setchar(#, 0, nchans, 'su'),                  // short -- nchans
+                str_setchar(#, 0, srate, 'iu'),                   // long  -- srate
+                str_setchar(#, 0, byterate, 'iu'),                // long  -- byterate
+                str_setchar(#, 0, nchans*bitspersample/8, 'su'),  // short -- blockalign
+                str_setchar(#, 0, bitspersample, 'su'));          // short -- bitspersample
+
+  //-----------------------------------------------------------------------------------------------------------------
+  //-- data_Chunk  =  data_ChunkID, data_ChunkDataSize, Data(bytes) - is written to a file later --------------------
+  //-----------------------------------------------------------------------------------------------------------------
+    fprintf(fp, "%s%s", 
+                "data",                                        // -- data_ChunkID
+                str_setchar(#, 0, data_ChunkDataSize, 'iu')); // long  --  data_ChunkDataSize
+  1; // return   
+);
+
+
+
+// Функция записывает в файл(fp) данные из буфера - "массива" eel от позиции buf до buf + buf_size
+function WriteWaveDataFromBuf(fp, buf, buf_size)
+( 
+  i=0;
+  loop(buf_size,
+    fprintf(fp, "%s", str_setchar(#, 0,  buf[i], 'f') );
+    i+=1;
+  );  
+);
+
+// Функция записывает в файл(fp) один семпл со значением val
+function WriteWaveDataSample(fp, val)
+( 
+  fprintf(fp, "%s", str_setchar(#, 0,  val, 'f') );
+);
+
+
+//-- TESTS ------------------------------------------------------------
+
+numSamples=44100; 
+audioFormat=3; 
+nchans=1; 
+srate=44100; 
+bitspersample=32;
+
+
+//-- Test wave from buf --------------------------
+// Warning - its only for test!!! ----------------
+//------------------------------------------------
+
+/* -- Uncooment this  for test --
+GetProjectPathEx(0, FilePath);
+strcat(FilePath,"\\Test.wav");
+//------------------------------------------------
+fp = fopen(FilePath,"wb");
+WriteWaveHeader(fp, numSamples, audioFormat, nchans, srate, bitspersample);
+buf=0;
+buf_size = 44100;
+i=0; s=0;
+loop(44100,
+  buf[i]= s ;
+  s+= 0.007;
+  s>1 ? s=-1;
+  i+=1;
+); 
+
+WriteWaveDataFromBuf(fp, buf, buf_size); //Test write from buf
+fclose(fp);    
+
+//-- Test wave each sample -----------------------
+GetProjectPathEx(0, FilePath);
+strcat(FilePath,"\\Test2.wav");
+//----------------------------
+fp = fopen(FilePath,"wb");
+WriteWaveHeader(fp, numSamples, audioFormat, nchans, srate, bitspersample);
+val=0;
+loop(44100,
+  WriteWaveDataSample(fp, val);
+  val+=0.0035;
+  val>1 ? val=-1;
+);  
+
+fclose(fp);    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
