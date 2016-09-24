@@ -1330,9 +1330,9 @@ function Wave:Filter_FFT(lowband, hiband)
     buf.fft_real(block_size,true)       -- FFT
       -----------------------------
       -- Clear lowband bins --
-      buf.clear(0, 1, lowband)                       -- clear start part
+      buf.clear(0, 1, lowband)                  -- clear low bins
       -- Clear hiband bins  --
-      buf.clear(0, hiband+1, block_size-hiband) -- clear mid part
+      buf.clear(0, hiband+1, block_size-hiband) -- clear hi bins
       -----------------------------  
     buf.ifft_real(block_size,true)      -- iFFT
     ----------------------------------------
