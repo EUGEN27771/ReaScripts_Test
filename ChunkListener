@@ -1,0 +1,275 @@
+local buf, ref_buf
+
+--==============================================================================
+local min, max = math.min, math.max
+local ceil, floor = math.ceil, math.floor
+
+function minmax(x, minv, maxv)
+  return min(max(x, minv),maxv)
+end
+----------------------------
+function round(x)
+  if x < 0 then return ceil(x - 0.5) else return floor(x + 0.5) end
+end
+----------------------------
+function round_to(x, step)
+  if x < 0 then return ceil(x/step - 0.5)*step else return floor(x/step + 0.5)*step end
+end
+
+--==============================================================================
+function pointIN(px, py, x,y,w,h)
+  return px >= x and px <= x + w and py >= y and py <= y + h
+end
+--------
+function mouseIN(x,y,w,h)
+  return pointIN(gfx.mouse_x, gfx.mouse_y, x,y,w,h)
+end
+
+-- LEFT ----------------------
+function mouseDown(x,y,w,h)
+  return mouse_down and mouseIN(x,y,w,h)
+end
+--------
+function mouseUp(x,y,w,h)
+  return mouse_up and mouseIN(x,y,w,h)
+end
+--------
+function mouseClick(x,y,w,h)
+  return mouseUp(x,y,w,h) and pointIN(mouse_down_x,mouse_down_y, x,y,w,h)
+end
+
+-- RIGHT ---------------------
+function mouseRDown(x,y,w,h)
+  return mouse_rdown and mouseIN(x,y,w,h)
+end
+
+--===========================================================================
+function GetLinesFromString(str) -- with "\n"
+  local lines = {}
+  for line in str:gmatch(".-\n") do
+    lines[#lines + 1] = line
+  end
+  -- Get last line or full string(if "\n" not found)
+  if #lines == 0 then lines[#lines + 1] = str
+    else lines[#lines + 1] = str:match(".*\n(.-)$")
+  end
+    -- Simple variant, but may be slowly for long monolit strings?
+    -- lines[#lines + 1] = str:match(".*\n(.-)$") or text
+  -------------
+  return lines
+end
+
+--===========================================================================
+-- Get track chunk(allow > 4MB)
+function GetTrackChunk(track)
+  if not track then return end
+  -- Try standart function -----
+  local ret, track_chunk = reaper.GetTrackStateChunk(track, "", false) -- isundo = false
+  if ret and track_chunk and #track_chunk < 4194303 then return track_chunk end
+  -- If chunk_size >= max_size, use wdl fast string --
+  local fast_str = reaper.SNM_CreateFastString("")
+  if reaper.SNM_GetSetObjectState(track, fast_str, false, false) then
+    track_chunk = reaper.SNM_GetFastString(fast_str)
+  end
+  reaper.SNM_DeleteFastString(fast_str)
+  return track_chunk
+end
+
+--===========================================================================
+function draw_line2(str1, str2) -- if ref_line ~= line
+  str2 = str2 or ""
+  local textw  = gfx.measurestr(str1)/(#str1-1) -- -"\n"
+  for i = 1, #str1 do
+    local c1, c2 = str1:sub(i, i), str2:sub(i, i)
+    if c1~=c2 then gfx.set(1, 0, 0) else gfx.set(0.1) end
+    gfx.x = gfx.texth + textw*(i-1) -- addition align
+    gfx.drawstr(c1)  
+  end
+  gfx.set(1, 0, 0)
+  gfx.line(gfx.texth, gfx.y + gfx.texth, gfx.x, gfx.y + gfx.texth)
+  gfx.set(0)
+end
+--===========================================================================
+function Draw1()
+  if buf then
+    gfx.setfont(1,"Courier New",16)
+    gfx.x, gfx.y = gfx.texth, gfx.texth -- start coords
+    gfx.set(0.1)
+    for i = s_pos, #buf do
+      if buf[i] == ref_buf[i] then gfx.drawstr(buf[i])
+        else draw_line2(buf[i], ref_buf[i])
+      end
+      gfx.x = gfx.texth
+      gfx.y = gfx.y + gfx.texth
+      if gfx.y > gfx.h - gfx.texth then break end 
+    end
+  end
+end
+
+--===========================================================================
+function ScrollLimits() -- globals!
+  if not buf then return end
+  max_lines = minmax(floor(gfx.h/gfx.texth), 1, #buf)
+  max_s_pos = max(1, #buf - max_lines)
+  s_pos = minmax(s_pos, 1, max_s_pos)
+end
+--===========================================================================
+function ScrollBar(x,y,w,h)
+  gfx.set(0.94) 
+  gfx.rect(x,y,w,h)
+  gfx.set(0.68); 
+  gfx.rect(x,y,w,h,0)
+  -------------------
+  local normval, sh, sy
+  -------------------
+  if s_pos == 1 then normval = 0 
+  else normval = (s_pos - 1)/(max_s_pos - 1)
+  end
+  -------------------
+  sh = max_lines/#buf * h      -- scroll bar h
+  sh = max(sh, 20)
+  sy = y + (h - sh) * normval  -- scroll bar y
+  gfx.set(0.8)
+  gfx.rect(x+1, sy, w-2, sh, 1)
+  -------------------
+  if gfx.mouse_cap&1==1 and pointIN(mouse_down_x, mouse_down_y, x,y,w,h ) and 
+    (mouse_down or mouse_move) then 
+    s_pos = round(max_s_pos * (gfx.mouse_y - y - sh/2) / (h - sh) )
+  end
+  
+end
+--===========================================================================
+function Button(x,y,w,h, lbl)
+  gfx.set(0.94) 
+  gfx.rect(x,y,w,h)
+  gfx.set(0.68) 
+  gfx.rect(x,y,w,h,0)
+  gfx.set(0.1) 
+  gfx.x, gfx.y = x, y
+  gfx.setfont(1,"Courier New",16) 
+  gfx.drawstr(lbl, 5, x+w, y+h)
+  return mouseDown(x,y,w,h)
+end
+
+--===========================================================================
+function GoToNextPrev()
+  local w, h = 20, gfx.texth
+  local x1, x2, x3 = gfx.w - w*3, gfx.w - w*2, gfx.w - w 
+  local y = 0
+  ----------------------------
+  if Button(x1,y,w,h, utf8.char(0x25C0)) and buf then
+    for i = s_pos - 1, 1, -1 do
+      if buf[i] ~= ref_buf[i] then s_pos = i; break end
+    end
+  end
+  ------------------
+  if Button(x2,y,w,h, utf8.char(0x25B6)) and buf then
+    for i = s_pos + 1, #buf do
+      if buf[i] ~= ref_buf[i] then s_pos = i; break end
+    end
+  end
+  ------------------
+  if Button(x3,y,w,h, utf8.char(0x25CF)) and buf then s_pos = 1 end
+  ------------------
+  if Button(x3,gfx.h-h,w,h, utf8.char(0x25CF)) and buf then s_pos = max_s_pos end
+end
+
+--===========================================================================
+
+function main()
+  ----------------------------
+  -- chunk upd rate linked to bufsize
+  if upd_cnt >= 1 then 
+    local track, track_chunk
+    track = reaper.GetSelectedTrack(0, 0)
+    if track then track_chunk = GetTrackChunk(track) end
+    if track_chunk then buf = GetLinesFromString(track_chunk) end
+    if not ref_buf then ref_buf = buf end
+    upd_cnt = 0 -- reset update counter
+  elseif buf then
+    upd_cnt = upd_cnt + 200/#buf
+  end
+  
+  ---------------
+  Draw1()
+  ---------------
+  
+  local x,y,w,h
+  if buf then
+    -------------
+    x,y,w,h = gfx.w - 220, 0, 160, gfx.texth, 1
+    if Button(x, y, w, h, "Update Reference") then ref_buf = buf end
+    -------------
+    GoToNextPrev()
+    -------------
+    x,y,w,h = gfx.w - 20, gfx.texth, 20, gfx.h - gfx.texth*2 
+    ScrollBar(x,y,w,h)
+    -------------
+    if gfx.mouse_wheel ~= 0 then 
+      s_pos = s_pos - round(gfx.mouse_wheel/20)
+      gfx.mouse_wheel = 0
+    end
+    -------------
+    ScrollLimits()
+  else
+    w, h = 200, 30
+    x, y = (gfx.w - w)/2, (gfx.h - h)/2 
+    Button(x,y,w,h, "No track selected!")
+  end
+
+end
+
+--------------------------------------------------------------------------------
+--   INIT   --------------------------------------------------------------------
+--------------------------------------------------------------------------------
+function Init()
+  -- Init window ------
+  gfx.clear = 0xF0F0F0
+  gfx.clear = 0xDEDEDC
+  gui = {w = 860, h = 500 , dock = 0, x = 100, y = 300}         
+  gfx.init("TEST", gui.w, gui.h, gui.dock, gui.x, gui.y)
+  mouse_last_cap = 0
+  mouse_down_x, mouse_down_y = 0, 0
+  mouse_last_x, mouse_last_y = 0, 0
+  ---------
+  s_pos, max_s_pos, max_lines = 1, 1, 1
+  upd_cnt = 1
+end
+
+----------------------------------------
+--   Mainloop   ------------------------
+----------------------------------------
+function mainloop()
+  -- mouse state -----------------------
+  mouse_down = gfx.mouse_cap&1==1 and mouse_last_cap&1==0
+  mouse_rdown = gfx.mouse_cap&2==2 and mouse_last_cap&2==0
+  mouse_up = gfx.mouse_cap&1==0 and mouse_last_cap&1==1
+  mouse_rup = gfx.mouse_cap&2==0 and mouse_last_cap&2==2
+  if mouse_down then mouse_down_x, mouse_down_y = gfx.mouse_x, gfx.mouse_y end
+  mouse_move = (mouse_last_x ~= gfx.mouse_x) or (mouse_last_y ~= gfx.mouse_y)
+  -- modkeys state ---------------------
+  Ctrl  = gfx.mouse_cap&4==4
+  Shift = gfx.mouse_cap&8==8
+  Alt   = gfx.mouse_cap&16==16
+  -------------------------
+  -- DRAW,MAIN functions --
+  main()
+  
+  -- update mouse last state -----------
+  gfx.mouse_wheel = 0
+  gfx.mouse_hwheel = 0
+  mouse_last_cap = gfx.mouse_cap
+  mouse_last_x = gfx.mouse_x
+  mouse_last_y = gfx.mouse_y
+  
+  --------------------------------------  
+  gfx.update() -- Update gfx window
+  --------------------------------------
+  char = gfx.getchar()
+  if char==32 then reaper.Main_OnCommand(40044, 0) end -- play 
+  if char~=-1 then reaper.defer(mainloop) end          -- defer
+end
+
+----------------------------------------
+Init()
+mainloop()
