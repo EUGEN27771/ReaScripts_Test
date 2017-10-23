@@ -171,7 +171,7 @@ function FXChain.RebuildPLINKS(track, fx_chain)
   end
   -- create convert table ----
   local src2dest = {}
-  for k, v in pairs(dest) do -- k = guid; v = idx, 1-based
+  for k, v in pairs(dest) do -- k = guid; v = idx
     local src, dest = src[k], dest[k]
     if src and dest then
       src2dest[src] = dest
