@@ -1,9 +1,8 @@
 --[[
    * Description: TestScript
    * Author: EUGEN27771
-   * Version: 1.02
-   * Provides: 
-        Modules/*.{lua}
+   * Version: 1.03
+   * Provides: Modules/*.{lua}
 --]]
 
 package.path = debug.getinfo(1,"S").source:match[[^@?(.*[\/])[^\/]-$]] .."?.lua;".. package.path
