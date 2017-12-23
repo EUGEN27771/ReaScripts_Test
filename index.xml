@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<index version="1" commit="c100be77ac65cedbdc96beb4b9dcc49a27f6012c" name="Test Scripts">
+  <category name="Functions">
+    <reapack name="gen_CreateWaveFile.eel" type="script" desc="CreateWaveFile">
+      <version name="1.0" author="EUGEN27771" time="2016-09-19T23:35:14Z">
+        <source main="main">https://github.com/EUGEN27771/ReaScripts_Test/raw/c698ab7552f0de77684978ad890b50f2b29e2cff/Functions/gen_CreateWaveFile.eel</source>
+      </version>
+    </reapack>
+    <reapack name="gen_DetectTransients.lua" type="script" desc="DetectTransients">
+      <version name="1.0" author="EUGEN27771" time="2016-09-15T22:15:38Z">
+        <source main="main">https://github.com/EUGEN27771/ReaScripts_Test/raw/d056ba5ddc3215b65da907b643b90d78f83c3a04/Functions/gen_DetectTransients.lua</source>
+      </version>
+    </reapack>
+  </category>
+</index>
