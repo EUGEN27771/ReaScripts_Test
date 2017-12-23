@@ -11,6 +11,7 @@ package.path = debug.getinfo(1,"S").source:match[[^@?(.*[\/])[^\/]-$]] .."?.lua;
 require "Modules.Module1"
 require "Modules.Module2"
 
--- Provides: Modules/*.{lua} >> reapack-index - OK!
+-- 
 
--- Provides: Images/*.{lua} >> reapack-index - OK!
+xxx = 987987
+
