@@ -4,7 +4,6 @@
    * Version: 1.02
    * Provides: 
         Modules/*.{lua}
-        Images/*.{png}
 --]]
 
 package.path = debug.getinfo(1,"S").source:match[[^@?(.*[\/])[^\/]-$]] .."?.lua;".. package.path
