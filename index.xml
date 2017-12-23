@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" commit="2183a690cc008d12cf27e113e02085c0ab95c0be" name="Test Scripts">
+<index version="1" commit="5dda6feffdaa88b68af06c837ff2a2e099bdcf78" name="Test Scripts">
   <category name="!Test">
     <reapack name="!!!!TestScript.lua" type="script" desc="TestScript">
       <version name="1.00" author="EUGEN27771" time="2017-12-23T23:01:47Z">
@@ -15,6 +15,9 @@
       </version>
       <version name="1.03" author="EUGEN27771" time="2017-12-23T23:42:13Z">
         <source main="main">https://github.com/EUGEN27771/ReaScripts_Test/raw/4771635c567b005343fa1fec70ea5d49bb359b13/!Test/!!!!TestScript.lua</source>
+      </version>
+      <version name="1.04" author="EUGEN27771" time="2017-12-23T23:51:07Z">
+        <source main="main">https://github.com/EUGEN27771/ReaScripts_Test/raw/5dda6feffdaa88b68af06c837ff2a2e099bdcf78/!Test/!!!!TestScript.lua</source>
       </version>
     </reapack>
   </category>
