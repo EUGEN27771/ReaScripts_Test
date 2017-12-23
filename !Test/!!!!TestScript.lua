@@ -1,7 +1,7 @@
 --[[
    * Description: TestScript
    * Author: EUGEN27771
-   * Version: 1.03
+   * Version: 1.04
    * Provides: 
         Modules/Module1.lua
         Images/button_phase_22x22x2.png
