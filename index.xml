@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" commit="beb220aae62a5cef5b47cd8fd7033fe56c87cc29" name="Test Scripts">
+<index version="1" commit="120943847e11ee2b961e15a5e6d615fa613acad8" name="Test Scripts">
   <category name="!Test">
     <reapack name="!!!!TestScript.lua" type="script" desc="TestScript">
       <version name="1.00" author="EUGEN27771" time="2017-12-23T23:01:47Z">
@@ -37,6 +37,14 @@
         <source file="Images/Image3.png">https://github.com/EUGEN27771/ReaScripts_Test/raw/beb220aae62a5cef5b47cd8fd7033fe56c87cc29/!Test/Images/Image3.png</source>
         <source file="Modules/Module1.lua">https://github.com/EUGEN27771/ReaScripts_Test/raw/beb220aae62a5cef5b47cd8fd7033fe56c87cc29/!Test/Modules/Module1.lua</source>
         <source file="Modules/Module2.lua">https://github.com/EUGEN27771/ReaScripts_Test/raw/beb220aae62a5cef5b47cd8fd7033fe56c87cc29/!Test/Modules/Module2.lua</source>
+      </version>
+      <version name="1.11" author="EUGEN27771" time="2017-12-24T02:24:39Z">
+        <source main="main">https://github.com/EUGEN27771/ReaScripts_Test/raw/120943847e11ee2b961e15a5e6d615fa613acad8/!Test/!!!!TestScript.lua</source>
+        <source file="Images/Image1.png">https://github.com/EUGEN27771/ReaScripts_Test/raw/120943847e11ee2b961e15a5e6d615fa613acad8/!Test/Images/Image1.png</source>
+        <source file="Images/Image2.png">https://github.com/EUGEN27771/ReaScripts_Test/raw/120943847e11ee2b961e15a5e6d615fa613acad8/!Test/Images/Image2.png</source>
+        <source file="Images/Image3.png">https://github.com/EUGEN27771/ReaScripts_Test/raw/120943847e11ee2b961e15a5e6d615fa613acad8/!Test/Images/Image3.png</source>
+        <source file="Modules/Module1.lua">https://github.com/EUGEN27771/ReaScripts_Test/raw/120943847e11ee2b961e15a5e6d615fa613acad8/!Test/Modules/Module1.lua</source>
+        <source file="Modules/Module2.lua">https://github.com/EUGEN27771/ReaScripts_Test/raw/120943847e11ee2b961e15a5e6d615fa613acad8/!Test/Modules/Module2.lua</source>
       </version>
     </reapack>
   </category>
