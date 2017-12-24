@@ -1,10 +1,8 @@
 --[[
    * Description: TestScript
    * Author: EUGEN27771
-   * Version: 1.04
-   * Provides: 
-        Modules/Module1.lua
-        Images/button_phase_22x22x2.png
+   * Version: 1.05
+   * Provides: Modules/Module1.lua
 --]]
 
 package.path = debug.getinfo(1,"S").source:match[[^@?(.*[\/])[^\/]-$]] .."?.lua;".. package.path
