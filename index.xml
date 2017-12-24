@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" commit="120943847e11ee2b961e15a5e6d615fa613acad8" name="Test Scripts">
+<index version="1" commit="75e2d085c5c0162bc9314fbd9427916026c2fc07" name="Test Scripts">
   <category name="!Test">
     <reapack name="!!!!TestScript.lua" type="script" desc="TestScript">
       <version name="1.00" author="EUGEN27771" time="2017-12-23T23:01:47Z">
@@ -45,6 +45,16 @@
         <source file="Images/Image3.png">https://github.com/EUGEN27771/ReaScripts_Test/raw/120943847e11ee2b961e15a5e6d615fa613acad8/!Test/Images/Image3.png</source>
         <source file="Modules/Module1.lua">https://github.com/EUGEN27771/ReaScripts_Test/raw/120943847e11ee2b961e15a5e6d615fa613acad8/!Test/Modules/Module1.lua</source>
         <source file="Modules/Module2.lua">https://github.com/EUGEN27771/ReaScripts_Test/raw/120943847e11ee2b961e15a5e6d615fa613acad8/!Test/Modules/Module2.lua</source>
+      </version>
+      <version name="1.12" author="EUGEN27771" time="2017-12-24T02:37:52Z">
+        <source main="main">https://github.com/EUGEN27771/ReaScripts_Test/raw/75e2d085c5c0162bc9314fbd9427916026c2fc07/!Test/!!!!TestScript.lua</source>
+        <source file="Images/Image1.png">https://github.com/EUGEN27771/ReaScripts_Test/raw/75e2d085c5c0162bc9314fbd9427916026c2fc07/!Test/Images/Image1.png</source>
+        <source file="Images/Image2.png">https://github.com/EUGEN27771/ReaScripts_Test/raw/75e2d085c5c0162bc9314fbd9427916026c2fc07/!Test/Images/Image2.png</source>
+        <source file="Images/Image3.png">https://github.com/EUGEN27771/ReaScripts_Test/raw/75e2d085c5c0162bc9314fbd9427916026c2fc07/!Test/Images/Image3.png</source>
+        <source file="Modules/Module1.lua">https://github.com/EUGEN27771/ReaScripts_Test/raw/75e2d085c5c0162bc9314fbd9427916026c2fc07/!Test/Modules/Module1.lua</source>
+        <source file="Modules/Module2.lua">https://github.com/EUGEN27771/ReaScripts_Test/raw/75e2d085c5c0162bc9314fbd9427916026c2fc07/!Test/Modules/Module2.lua</source>
+        <source type="effect" file="Utilities/JS1">https://github.com/EUGEN27771/ReaScripts_Test/raw/75e2d085c5c0162bc9314fbd9427916026c2fc07/!Test/Utilities/JS1</source>
+        <source type="effect" file="Utilities/JS2">https://github.com/EUGEN27771/ReaScripts_Test/raw/75e2d085c5c0162bc9314fbd9427916026c2fc07/!Test/Utilities/JS2</source>
       </version>
     </reapack>
   </category>
