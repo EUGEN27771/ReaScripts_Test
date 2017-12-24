@@ -1,7 +1,7 @@
 --[[
    * Description: TestScript
    * Author: EUGEN27771
-   * Version: 1.05
+   * Version: 1.06
    * Provides: 
        Modules/Module1.lua
        Images/Image1.png
