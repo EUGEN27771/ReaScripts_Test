@@ -1,6 +1,5 @@
-
 -- @description TestScript
--- @version 1.08
+-- @version 1.09
 -- @author EUGEN27771
 -- @provides
 --   {Images,Modules}/*
