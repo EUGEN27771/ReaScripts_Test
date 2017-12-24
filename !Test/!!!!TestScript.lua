@@ -1,8 +1,9 @@
 -- @description TestScript
--- @version 1.11
+-- @version 1.12
 -- @author EUGEN27771
 -- @provides
 --   {Images,Modules}/*
+--   [effect] Utilities/*
 
 package.path = debug.getinfo(1,"S").source:match[[^@?(.*[\/])[^\/]-$]] .."?.lua;".. package.path
 require "Modules.Module1"
